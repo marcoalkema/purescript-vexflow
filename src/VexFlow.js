@@ -3,11 +3,13 @@
 module.exports = {
 
     createCanvas: (function(div) {
+	console.log ("canvas created");
 	return $(div)[0];
     }),
 
     createRenderer: (function(canvas) {
-	var renderer =  new Vex.Flow.Renderer(canvas, Vex.Flow.Renderer.Backends.CANVAS);
+	console.log (canvas);
+	var renderer = new Vex.Flow.Renderer(canvas, Vex.Flow.Renderer.Backends.CANVAS);
 	return renderer;
     }),
 
@@ -20,7 +22,7 @@ module.exports = {
 	return stave;
     }),
 
-    drawStave: function(clef) {
+    drawStave: function(stave, clef, ctx) {
 	stave.addClef(clef).setContext(ctx).draw();
     },
 
