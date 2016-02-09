@@ -5,11 +5,16 @@ import Prelude
 -- import Control.Monad.Eff.Console
 import VexFlow as Vx
 
-main :: Vx.CanvasEff
+main :: Vx.VexFlowEff
 main = do
   canvas <- Vx.createCanvas "notationCanvas"
-  Vx.createRenderer canvas
-  -- ctx <- VX.createCtx renderer
-  -- stave <- VX.createStave 1.0 1.0 500.0
-  -- VX.drawStave stave "Treble" ctx
+  renderer <- Vx.createRenderer canvas
+  ctx <- Vx.createCtx renderer
+  stave <- Vx.createStave 1.0 1.0 500.0
+  Vx.drawStave stave "treble" ctx
+  notes <- Vx.createNote ["c/4", "e/4", "g/4"] "w"
+  voice <- Vx.createNewVoice 1.0 1.0
+  voices <- Vx.addNotesToVoice notes voice
+  Vx.formatter voice 500.0
+  Vx.drawVoice ctx stave
   

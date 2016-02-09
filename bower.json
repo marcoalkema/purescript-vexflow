@@ -12,6 +12,7 @@
   ],
   "dependencies": {
     "purescript-console": "^0.1.0",
-    "purescript-lists": "^0.7.9"
+    "purescript-lists": "^0.7.9",
+    "purescript-arrays": "^0.4.4"
   }
 }
