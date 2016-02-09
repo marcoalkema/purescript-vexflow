@@ -5,16 +5,18 @@ import Control.Monad.Eff
 import Data.List
 
 foreign import data VEXFLOW :: !
+foreign import data Canvas :: *
+foreign import data DOM :: !
+type CanvasEff = Eff (dom:: DOM) Canvas
 
-type Div = String
 type Clef = String
 type Note = String
 type Octave = Number
 type Duration = Number
 
-foreign import createCanvas :: forall e. Div -> Eff (vexFlow :: VEXFLOW | e) Unit
+foreign import createCanvas :: String -> CanvasEff
 -- Needs to be JS effect
-foreign import createRenderer :: forall e. Unit -> Eff (vexFlow :: VEXFLOW | e) Unit
+foreign import createRenderer :: Canvas -> CanvasEff
 foreign import createCtx  :: forall e. Unit -> Eff (vexFlow :: VEXFLOW | e) Unit
 foreign import createStave  :: forall e. Number -> Number -> Number -> Eff (vexFlow :: VEXFLOW | e) Unit
 foreign import drawStave  :: forall e. Unit -> Clef -> Unit -> Eff (vexFlow :: VEXFLOW | e) Unit
