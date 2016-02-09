@@ -3,13 +3,13 @@
 module.exports = {
 
     createCanvas: (function(div) {
-	console.log ("canvas created");
+	console.log ("canvas created: " + div);
 	return $(div)[0];
     }),
 
     createRenderer: (function(canvas) {
 	console.log (canvas);
-	var renderer = new Vex.Flow.Renderer(canvas, Vex.Flow.Renderer.Backends.CANVAS);
+	var renderer = new Vex.Flow.Renderer($(canvas)[0], Vex.Flow.Renderer.Backends.CANVAS);
 	return renderer;
     }),
 
