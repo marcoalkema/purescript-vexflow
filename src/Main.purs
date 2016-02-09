@@ -7,7 +7,7 @@ import VexFlow as Vx
 
 main :: Vx.CanvasEff
 main = do
-  canvas <- Vx.createCanvas "#one canvas"
+  canvas <- Vx.createCanvas "notationCanvas"
   Vx.createRenderer canvas
   -- ctx <- VX.createCtx renderer
   -- stave <- VX.createStave 1.0 1.0 500.0

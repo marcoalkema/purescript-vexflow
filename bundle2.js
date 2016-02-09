@@ -4706,7 +4706,7 @@ var Prelude = require("Prelude");
 var VexFlow = require("VexFlow");
 var Control_Monad_Eff = require("Control.Monad.Eff");
 var main = function __do() {
-    var _0 = VexFlow.createCanvas("#one canvas")();
+    var _0 = VexFlow.createCanvas("notationCanvas")();
     return VexFlow.createRenderer(_0)();
 };
 module.exports = {
@@ -5823,15 +5823,14 @@ module.exports = {
 
     createCanvas: (function(div) {
 	return function(){
-	    console.log ("canvas created: " + div);
-	    return $(div)[0];
+	    return document.getElementById(div);
 	};
     }),
 
     createRenderer: (function(canvas) {
 	return function() {
 	    console.log(canvas);
-	    var renderer = new Vex.Flow.Renderer(document.getElementById(canvas), Vex.Flow.Renderer.Backends.CANVAS);
+	    var renderer = new Vex.Flow.Renderer(canvas, Vex.Flow.Renderer.Backends.CANVAS);
 	    return renderer;
 	};
     }),
