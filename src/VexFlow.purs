@@ -18,6 +18,7 @@ type Note = { pitch :: Array Pitch
              , duration :: Duration
              }
 type Voice = Array Note
+type Voices = Array Voice
 type Octave = Number
 
 foreign import createCanvas :: String -> CanvasEff

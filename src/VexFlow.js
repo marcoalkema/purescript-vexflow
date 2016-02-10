@@ -49,16 +49,6 @@ module.exports = {
 	};
     },
 
-    // createNote: function(notes) {
-    // 	    return function(duration_) {
-    // 		console.log (notes + " " + duration_);
-    // 		return function() {
-    // 		    var note = [new Vex.Flow.StaveNote({ keys: notes, duration: duration_})];
-    // 		    return note;
-    // 		};
-    // 	    };
-    // },
-
         createNotes: function(notes) {
 	    console.log (notes);
 	    return function() {

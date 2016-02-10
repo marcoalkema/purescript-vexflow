@@ -5,8 +5,8 @@ import Prelude
 -- import Control.Monad.Eff.Console
 import VexFlow as Vx
 
-main :: Vx.VexFlowEff
-main = do
+main :: Vx.Voices -> Vx.VexFlowEff
+main voiceArr = do
   canvas <- Vx.createCanvas "notationCanvas"
   renderer <- Vx.createRenderer canvas
   ctx <- Vx.createCtx renderer
@@ -19,3 +19,10 @@ main = do
   Vx.formatter voice 500.0
   Vx.drawVoice ctx stave voice
   
+voices :: Vx.Voices
+voices = [[{pitch: ["c/4", "e/4", "g/4"], duration: "h"}
+          ,{pitch: ["g/4", "b/4", "d/4"], duration: "h"}
+           ]
+          ,[{pitch: ["a/5"], duration: "w"}
+           ]
+          ]
