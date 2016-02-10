@@ -12,9 +12,10 @@ main = do
   ctx <- Vx.createCtx renderer
   stave <- Vx.createStave 1.0 1.0 500.0
   Vx.drawStave stave "treble" ctx
-  notes <- Vx.createNote ["c/4", "e/4", "g/4"] "w"
+  notes <- Vx.createNotes [{pitch: ["c/4", "e/4", "g/4"], duration: "h"}
+                          ,{pitch: ["g/4", "b/4", "d/4"], duration: "h"}]
   voice <- Vx.createNewVoice 1.0 1.0
-  voices <- Vx.addNotesToVoice notes voice
+  Vx.addNotesToVoice notes voice
   Vx.formatter voice 500.0
-  Vx.drawVoice ctx stave
+  Vx.drawVoice ctx stave voice
   

@@ -102,16 +102,22 @@ var Prelude = require("Prelude");
 var VexFlow = require("VexFlow");
 var Control_Monad_Eff = require("Control.Monad.Eff");
 var main = function __do() {
-    var _6 = VexFlow.createCanvas("notationCanvas")();
-    var _5 = VexFlow.createRenderer(_6)();
-    var _4 = VexFlow.createCtx(_5)();
-    var _3 = VexFlow.createStave(1.0)(1.0)(500.0)();
-    VexFlow.drawStave(_3)("treble")(_4)();
-    var _2 = VexFlow.createNote([ "c/4", "e/4", "g/4" ])("w")();
-    var _1 = VexFlow.createNewVoice(1.0)(1.0)();
-    var _0 = VexFlow.addNotesToVoice(_2)(_1)();
-    VexFlow.formatter(_1)(500.0)();
-    return VexFlow.drawVoice(_4)(_3)();
+    var _5 = VexFlow.createCanvas("notationCanvas")();
+    var _4 = VexFlow.createRenderer(_5)();
+    var _3 = VexFlow.createCtx(_4)();
+    var _2 = VexFlow.createStave(1.0)(1.0)(500.0)();
+    VexFlow.drawStave(_2)("treble")(_3)();
+    var _1 = VexFlow.createNotes([ {
+        pitch: [ "c/4", "e/4", "g/4" ], 
+        duration: "h"
+    }, {
+        pitch: [ "g/4", "b/4", "d/4" ], 
+        duration: "h"
+    } ])();
+    var _0 = VexFlow.createNewVoice(1.0)(1.0)();
+    VexFlow.addNotesToVoice(_1)(_0)();
+    VexFlow.formatter(_0)(500.0)();
+    return VexFlow.drawVoice(_3)(_2)(_0)();
 };
 module.exports = {
     main: main
@@ -1272,19 +1278,33 @@ module.exports = {
 	};
     },
 
-    createNote: function(notes) {
-	    return function(duration_) {
-		console.log (notes + " " + duration_);
-		return function() {
-    		    var note = new Vex.Flow.StaveNote({ keys: notes, duration: duration_});
-		    return note;
-		};
-	};
-    },
+    // createNote: function(notes) {
+    // 	    return function(duration_) {
+    // 		console.log (notes + " " + duration_);
+    // 		return function() {
+    // 		    var note = [new Vex.Flow.StaveNote({ keys: notes, duration: duration_})];
+    // 		    return note;
+    // 		};
+    // 	    };
+    // },
+
+        createNotes: function(notes) {
+	    console.log (notes);
+	    return function() {
+		return notes.map(function(note){
+		    return (new Vex.Flow.StaveNote({ keys: note.pitch, duration: note.duration}));
+		});
+	    };
+	},
+			 
+			 
+			  
+			   
 
     createNewVoice: function(numBeats) {
 	return function(beatValue) {
 	    return function() {
+		console.log("CreateNewVoice");
 		var voice = new Vex.Flow.Voice({
 		    num_beats: numBeats,
 		    beat_value: beatValue,
@@ -1305,17 +1325,24 @@ module.exports = {
     },
 
     // Format and justify the notes to 500 pixels
-    formatter: function(voices) {
+    formatter: function(voice) {
 	return function(pxRes) {
-	    console.log (voices + " " + pxRes);
-	    var formatter = new Vex.Flow.Formatter().joinVoices([voices]).format([voices], pxRes);
-	    return formatter;
+	    return function() {
+		console.log ("Formatter: " + voice + " " + pxRes);
+		var formatter = new Vex.Flow.Formatter().joinVoices([voice]).format([voice], pxRes);
+		return formatter;
+	    };
 	};
     },
 	
     drawVoice: function(ctx) {
 	return function(stave) {
-	    voice.draw(ctx, stave);
+	    return function(voice) {
+		return function() {
+		    console.log(ctx + stave + voice);
+		    voice.draw(ctx, stave);
+		};
+	    };
 	};
     }
 };
@@ -1331,7 +1358,7 @@ module.exports = {
     formatter: $foreign.formatter, 
     addNotesToVoice: $foreign.addNotesToVoice, 
     createNewVoice: $foreign.createNewVoice, 
-    createNote: $foreign.createNote, 
+    createNotes: $foreign.createNotes, 
     drawStave: $foreign.drawStave, 
     createStave: $foreign.createStave, 
     createCtx: $foreign.createCtx, 

@@ -49,19 +49,33 @@ module.exports = {
 	};
     },
 
-    createNote: function(notes) {
-	    return function(duration_) {
-		console.log (notes + " " + duration_);
-		return function() {
-    		    var note = new Vex.Flow.StaveNote({ keys: notes, duration: duration_});
-		    return note;
-		};
-	};
-    },
+    // createNote: function(notes) {
+    // 	    return function(duration_) {
+    // 		console.log (notes + " " + duration_);
+    // 		return function() {
+    // 		    var note = [new Vex.Flow.StaveNote({ keys: notes, duration: duration_})];
+    // 		    return note;
+    // 		};
+    // 	    };
+    // },
+
+        createNotes: function(notes) {
+	    console.log (notes);
+	    return function() {
+		return notes.map(function(note){
+		    return (new Vex.Flow.StaveNote({ keys: note.pitch, duration: note.duration}));
+		});
+	    };
+	},
+			 
+			 
+			  
+			   
 
     createNewVoice: function(numBeats) {
 	return function(beatValue) {
 	    return function() {
+		console.log("CreateNewVoice");
 		var voice = new Vex.Flow.Voice({
 		    num_beats: numBeats,
 		    beat_value: beatValue,
@@ -82,17 +96,24 @@ module.exports = {
     },
 
     // Format and justify the notes to 500 pixels
-    formatter: function(voices) {
+    formatter: function(voice) {
 	return function(pxRes) {
-	    console.log (voices + " " + pxRes);
-	    var formatter = new Vex.Flow.Formatter().joinVoices([voices]).format([voices], pxRes);
-	    return formatter;
+	    return function() {
+		console.log ("Formatter: " + voice + " " + pxRes);
+		var formatter = new Vex.Flow.Formatter().joinVoices([voice]).format([voice], pxRes);
+		return formatter;
+	    };
 	};
     },
 	
     drawVoice: function(ctx) {
 	return function(stave) {
-	    voice.draw(ctx, stave);
+	    return function(voice) {
+		return function() {
+		    console.log(ctx + stave + voice);
+		    voice.draw(ctx, stave);
+		};
+	    };
 	};
     }
 };
