@@ -49,15 +49,17 @@ module.exports = {
 	};
     },
 
-        createNotes: function(notes) {
-	    console.log (notes);
+        createNotes: function(voices) {
+	    console.log (voices);
 	    return function() {
-		return notes.map(function(note){
-		    return (new Vex.Flow.StaveNote({ keys: note.pitch, duration: note.duration}));
+		voices.map(function(voice){
+		    return function() {
+			return notes.map(function(note){
+			    return (new Vex.Flow.StaveNote({ keys: note.pitch, duration: note.duration}));
+			});
+		    };
 		});
-	    };
-	},
-			 
+	    },
 			 
 			  
 			   
