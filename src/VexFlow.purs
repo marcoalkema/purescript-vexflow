@@ -18,7 +18,7 @@ type Note = { pitch :: Array Pitch
              , duration :: Duration
              }
 type Voice = Array Note
-type Voices = Array Voice
+type Bar = Array Voice
 type Octave = Number
 
 foreign import createCanvas :: String -> CanvasEff
@@ -28,7 +28,7 @@ foreign import createStave  :: Number -> Number -> Number -> VexFlowEff
 -- Eff in DOM
 foreign import drawStave  :: VexFlow -> Clef -> VexFlow -> VexFlowEff
 
-foreign import createNotes  :: Voice -> VexFlowEff
+foreign import createNotes  :: Bar -> VexFlowEff
 foreign import createNewVoice  :: Number -> Number -> VexFlowEff
 foreign import addNotesToVoice  :: VexFlow -> VexFlow -> VexFlowEff
 foreign import formatter  :: VexFlow -> Number -> VexFlowEff

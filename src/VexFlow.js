@@ -49,21 +49,17 @@ module.exports = {
 	};
     },
 
-        createNotes: function(voices) {
-	    console.log (voices);
-	    return function() {
-		voices.map(function(voice){
-		    return function() {
-			return notes.map(function(note){
-			    return (new Vex.Flow.StaveNote({ keys: note.pitch, duration: note.duration}));
-			});
-		    };
-		});
-	    },
+    createNotes: function(voices) {
+	return function() {
+	    console.log ("createNotes: " + (typeof voices));
+	    return voices.map(function(voice){
+		return voice.map(function(note){
+		    return (new Vex.Flow.StaveNote({ keys: note.pitch, duration: note.duration})); 
+		    });
+	    });
+	};
+    },
 			 
-			  
-			   
-
     createNewVoice: function(numBeats) {
 	return function(beatValue) {
 	    return function() {
@@ -80,10 +76,10 @@ module.exports = {
 
     addNotesToVoice: function(notes) {
 	return function(voice) {
-	    return function() {
 		console.log (voice + " " + notes);
-		voice.addTickables(notes);
-	    };
+		return notes.map(function(note) {
+		    return voice.addTickables(note);
+		});
 	};
     },
 
