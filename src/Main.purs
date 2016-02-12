@@ -11,7 +11,7 @@ main = do
   renderer <- Vx.createRenderer canvas
   ctx <- Vx.createCtx renderer
   stave <- Vx.createStave 1.0 1.0 500.0
-  Vx.drawStave stave "bass" ctx  
+  Vx.drawStave stave "treble" ctx  
   notes <- Vx.createNotes voices
   voicing <- Vx.addNotesToVoice notes (Vx.createNewVoice 4.0 4.0)
   Vx.formatter voicing 500.0

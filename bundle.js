@@ -125,7 +125,7 @@ var main = function __do() {
     var _4 = VexFlow.createRenderer(_5)();
     var _3 = VexFlow.createCtx(_4)();
     var _2 = VexFlow.createStave(1.0)(1.0)(500.0)();
-    VexFlow.drawStave(_2)("bass")(_3)();
+    VexFlow.drawStave(_2)("treble")(_3)();
     var _1 = VexFlow.createNotes(voices)();
     var _0 = VexFlow.addNotesToVoice(_1)(VexFlow.createNewVoice(4.0)(4.0))();
     VexFlow.formatter(_0)(500.0)();
