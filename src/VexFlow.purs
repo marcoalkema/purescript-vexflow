@@ -30,7 +30,7 @@ foreign import drawStave  :: VexFlow -> Clef -> VexFlow -> VexFlowEff
 
 foreign import createNotes  :: Bar -> VexFlowEff
 foreign import createNewVoice  :: Number -> Number -> VexFlowEff
-foreign import addNotesToVoice  :: VexFlow -> VexFlow -> VexFlowEff
+foreign import addNotesToVoice  :: VexFlow  -> VexFlowEff -> VexFlowEff
 foreign import formatter  :: VexFlow -> Number -> VexFlowEff
 foreign import drawVoice  :: VexFlow -> VexFlow -> VexFlow ->VexFlowEff
 

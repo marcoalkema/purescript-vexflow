@@ -3,105 +3,113 @@
 module.exports = {
 
     createCanvas: (function(div) {
-	return function(){
-	    return document.getElementById(div);
-	};
+    	return function(){
+    	    return document.getElementById(div);
+    	};
     }),
 
     createRenderer: (function(canvas) {
-	return function() {
-	    console.log(canvas);
-	    var renderer = new Vex.Flow.Renderer(canvas, Vex.Flow.Renderer.Backends.CANVAS);
-	    return renderer;
-	};
+    	return function() {
+    	    console.log(canvas);
+    	    var renderer = new Vex.Flow.Renderer(canvas, Vex.Flow.Renderer.Backends.CANVAS);
+    	    return renderer;
+    	};
     }),
 
     createCtx: (function(renderer) {
-	return function() {
-	    console.log ("Creating context for: " + renderer);
-	    return renderer.getContext();
-	};
+    	return function() {
+    	    console.log ("Creating context for: " + renderer);
+    	    return renderer.getContext();
+    	};
     }),
 
     createStave: (function(x) {
-	return function(y) {
-	    return function(width) {
-		return function() {
-		    console.log ("createStave");
-		    var stave = new Vex.Flow.Stave(x, y, width);
-		    return stave;
-		};
-	    };
+    	return function(y) {
+    	    return function(width) {
+    		return function() {
+    		    console.log ("createStave");
+    		    var stave = new Vex.Flow.Stave(x, y, width);
+    		    return stave;
+    		};
+    	    };
 	
-	};
+    	};
     }),
 
     drawStave: function(stave) {
-	return function(clef) {
-	    return function(ctx) {
-		return function() {
-		    console.log(stave);
-		    console.log(clef);
-		    console.log(ctx);
-		    stave.addClef(clef).setContext(ctx).draw();
-		};
-	    };
-	};
+    	return function(clef) {
+    	    return function(ctx) {
+    		return function() {
+    		    console.log(stave);
+    		    console.log(clef);
+    		    console.log(ctx);
+    		    stave.addClef(clef).setContext(ctx).draw();
+    		};
+    	    };
+    	};
     },
 
     createNotes: function(voices) {
-	return function() {
-	    console.log ("createNotes: " + (typeof voices));
-	    return voices.map(function(voice){
-		return voice.map(function(note){
-		    return (new Vex.Flow.StaveNote({ keys: note.pitch, duration: note.duration})); 
-		    });
-	    });
-	};
+    	return function() {
+    	    return voices.map(function(voice){
+    		console.log("createNotes " + (JSON.stringify(voice)));
+    		    return voice.map(function(note){
+    			return (new Vex.Flow.StaveNote({ keys: note.pitch, duration: note.duration}));
+			
+    		    });
+    	    });
+    	};
+	
     },
 			 
     createNewVoice: function(numBeats) {
-	return function(beatValue) {
-	    return function() {
-		console.log("CreateNewVoice");
-		var voice = new Vex.Flow.Voice({
-		    num_beats: numBeats,
-		    beat_value: beatValue,
-		    resolution: Vex.Flow.RESOLUTION
-		});
-		return voice;
-	    };
-	};
+    	return function(beatValue) {
+    	    return function() {
+    		console.log("CreateNewVoice in: " + numBeats + " : " + beatValue);
+    		return (new Vex.Flow.Voice({
+    		    num_beats: numBeats,
+    		    beat_value: beatValue,
+    		    resolution: Vex.Flow.RESOLUTION
+    		}));
+    	    };
+    	};
     },
 
     addNotesToVoice: function(notes) {
-	return function(voice) {
-		console.log (voice + " " + notes);
-		return notes.map(function(note) {
-		    return voice.addTickables(note);
-		});
-	};
+    	return function(voice) {
+    		return function() {
+    		    console.log(voice);
+    		    console.log(notes);
+    		    return notes.map(function(note) {
+    			// console.log (JSON.stringify(note, null, 4));
+    			return voice().addTickables(note);
+    		    });
+    		};
+    	};
     },
 
     // Format and justify the notes to 500 pixels
-    formatter: function(voice) {
-	return function(pxRes) {
-	    return function() {
-		console.log ("Formatter: " + voice + " " + pxRes);
-		var formatter = new Vex.Flow.Formatter().joinVoices([voice]).format([voice], pxRes);
-		return formatter;
-	    };
-	};
+    formatter: function(voices) {
+    	return function(pxRes) {
+    	    return function() {
+    		console.log("Formatter :" + voices + " - " + "Pixel resolution : " + pxRes);
+    		// console.log(JSON.stringify(voices));
+    		var formatter = new Vex.Flow.Formatter().joinVoices(voices).format(voices, pxRes);
+    		return formatter;
+    	    };
+    	};
     },
 	
     drawVoice: function(ctx) {
-	return function(stave) {
-	    return function(voice) {
-		return function() {
-		    console.log(ctx + stave + voice);
-		    voice.draw(ctx, stave);
-		};
-	    };
-	};
+    	return function(stave) {
+    	    return function(voices) {
+    		return function() {
+    		    voices.map(function(voice) {
+    			console.log(ctx + stave + voice);
+    			return voice.draw(ctx,stave);
+    			});
+    		};
+    	    };
+    	};
     }
 };
