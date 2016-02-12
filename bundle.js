@@ -105,11 +105,20 @@ var voices = [ [ {
     pitch: [ "c/4", "f/4", "g/4" ], 
     duration: "h"
 }, {
-    pitch: [ "g/" ], 
+    pitch: [ "b/5" ], 
     duration: "h"
 } ], [ {
     pitch: [ "a/5" ], 
     duration: "w"
+} ], [ {
+    pitch: [ "c/5" ], 
+    duration: "h"
+}, {
+    pitch: [ "d/5" ], 
+    duration: "q"
+}, {
+    pitch: [ "g/5" ], 
+    duration: "q"
 } ] ];
 var main = function __do() {
     var _5 = VexFlow.createCanvas("notationCanvas")();
@@ -1338,7 +1347,7 @@ module.exports = {
     	    return function(voices) {
     		return function() {
     		    voices.map(function(voice) {
-    			console.log(ctx + stave + voice);
+    			console.log(voice);
     			return voice.draw(ctx,stave);
     			});
     		};

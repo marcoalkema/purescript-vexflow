@@ -19,7 +19,10 @@ main = do
   
 voices :: Vx.Bar
 voices = [[{pitch: ["c/4", "f/4", "g/4"], duration: "h"}
-          ,{pitch: ["g/"], duration: "h"}
+          ,{pitch: ["b/5"], duration: "h"}
            ]
          , [{pitch: ["a/5"], duration: "w"}]
+         , [{pitch: ["c/5"], duration: "h"}
+           ,{pitch: ["d/5"], duration: "q"}
+           ,{pitch: ["g/5"], duration: "q"}]
           ]

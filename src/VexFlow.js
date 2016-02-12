@@ -105,7 +105,7 @@ module.exports = {
     	    return function(voices) {
     		return function() {
     		    voices.map(function(voice) {
-    			console.log(ctx + stave + voice);
+    			console.log(voice);
     			return voice.draw(ctx,stave);
     			});
     		};
