@@ -2,6 +2,7 @@ module VexFlow where
 
 import Prelude
 import Control.Monad.Eff
+import Data.List
 
 
 foreign import data VEXFLOW       :: !
@@ -20,8 +21,10 @@ type Note = { pitch               :: Pitch
 type VexNote = {pitch             :: Array Pitch
                 ,duration         :: Duration}
 type Voice = Array VexNote
+type Voice2 = List VexNote
 type Bar = Array Voice
 type Octave = Number
+type KeySignature = String
 
 foreign import createCanvas       :: String -> CanvasEff
 foreign import createRenderer     :: Canvas -> VexFlowEff
@@ -29,6 +32,7 @@ foreign import createCtx          :: VexFlow -> VexFlowEff
 foreign import createStave        :: Number -> Number -> Number -> VexFlowEff
 -- Eff in DOM
 foreign import drawStave          :: VexFlow -> Clef -> VexFlow -> VexFlowEff
+foreign import createKeySignature :: KeySignature -> VexFlow -> VexFlowEff
 
 foreign import createNotes        :: Bar -> VexFlowEff
 foreign import createNewVoice     :: Number -> Number -> VexFlowEff

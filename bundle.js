@@ -108,23 +108,30 @@ var voices = [ [ {
     pitch: [ "b/5" ], 
     duration: "h"
 } ], [ {
-    pitch: [ "a/5" ], 
-    duration: "w"
+    pitch: [ "ab/5" ], 
+    duration: "1"
 } ], [ {
-    pitch: [ "c/5" ], 
-    duration: "h"
+    pitch: [ "c#/5" ], 
+    duration: "2"
 }, {
-    pitch: [ "d/5" ], 
-    duration: "q"
+    pitch: [ "d##/5" ], 
+    duration: "8"
 }, {
-    pitch: [ "g/5" ], 
-    duration: "q"
+    pitch: [ "gbb/5" ], 
+    duration: "8"
+}, {
+    pitch: [ "d##/5" ], 
+    duration: "8"
+}, {
+    pitch: [ "gbb/5" ], 
+    duration: "8"
 } ] ];
 var main = function __do() {
     var _5 = VexFlow.createCanvas("notationCanvas")();
     var _4 = VexFlow.createRenderer(_5)();
     var _3 = VexFlow.createCtx(_4)();
     var _2 = VexFlow.createStave(1.0)(1.0)(500.0)();
+    VexFlow.createKeySignature("D")(_2)();
     VexFlow.drawStave(_2)("treble")(_3)();
     var _1 = VexFlow.createNotes(voices)();
     var _0 = VexFlow.addNotesToVoice(_1)(VexFlow.createNewVoice(4.0)(4.0))();
@@ -1291,6 +1298,14 @@ module.exports = {
     	};
     },
 
+    createKeySignature: function(key) {
+	return function (stave) {
+	    return function() {
+		return ((new Vex.Flow.KeySignature(key)).addToStave(stave));
+	    };
+	};
+    },
+
     createNotes: function(voices) {
     	return function() {
     	    return voices.map(function(voice){
@@ -1368,6 +1383,7 @@ module.exports = {
     addNotesToVoice: $foreign.addNotesToVoice, 
     createNewVoice: $foreign.createNewVoice, 
     createNotes: $foreign.createNotes, 
+    createKeySignature: $foreign.createKeySignature, 
     drawStave: $foreign.drawStave, 
     createStave: $foreign.createStave, 
     createCtx: $foreign.createCtx, 

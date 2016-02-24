@@ -1,9 +1,14 @@
 module Main where
 
 import Prelude
+import Data.List.Lazy
+import Data.Tuple
+import Music as M
 -- import Control.Monad.Eff
 -- import Control.Monad.Eff.Console
 import VexFlow as Vx
+
+type Voice2 = List Vx.VexNote
 
 main :: Vx.VexFlowEff
 main = do
@@ -11,6 +16,7 @@ main = do
   renderer <- Vx.createRenderer canvas
   ctx <- Vx.createCtx renderer
   stave <- Vx.createStave 1.0 1.0 500.0
+  Vx.createKeySignature "D" stave
   Vx.drawStave stave "treble" ctx  
   notes <- Vx.createNotes voices
   voicing <- Vx.addNotesToVoice notes (Vx.createNewVoice 4.0 4.0)
@@ -21,8 +27,30 @@ voices :: Vx.Bar
 voices = [[{pitch: ["c/4", "f/4", "g/4"], duration: "h"}
           ,{pitch: ["b/5"], duration: "h"}
            ]
-         , [{pitch: ["a/5"], duration: "w"}]
-         , [{pitch: ["c/5"], duration: "h"}
-           ,{pitch: ["d/5"], duration: "q"}
-           ,{pitch: ["g/5"], duration: "q"}]
+         , [{pitch: ["ab/5"], duration: "1"}]
+         , [{pitch: ["c#/5"], duration: "2"}
+           ,{pitch: ["d##/5"], duration: "8"}
+           ,{pitch: ["gbb/5"], duration: "8"}
+           ,{pitch: ["d##/5"], duration: "8"}
+           ,{pitch: ["gbb/5"], duration: "8"}
+           ]
           ]
+
+-- voiceIndex :: forall a b. Array a -> List (Tuple a b)
+-- voiceIndex voice = Data.List.Lazy.zip (toList voice) (Data.List.Lazy.iterate (+1) 0)
+
+-- accidentals :: forall a b. List (Tuple a b) -> List (Array Int)
+-- accidentals voice = map (\Tuple a b -> if a.accidental /= M.Natural then [b] else []) voice
+
+
+
+-- hasAccidental :: Voice -> Array Int
+-- hasAccidental voice = if voice.accidental != natural then
+--                         true
+--                       else
+--                         false
+
+-- accidentalIndex voices = foldl (\voice accumulator -> if voice.accidental != Natural then index
+
+-- infiniteList :: Int -> Array Int
+-- infiniteList init = init Data.Array.cons map (+1) infiniteList

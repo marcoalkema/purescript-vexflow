@@ -49,6 +49,14 @@ module.exports = {
     	};
     },
 
+    createKeySignature: function(key) {
+	return function (stave) {
+	    return function() {
+		return ((new Vex.Flow.KeySignature(key)).addToStave(stave));
+	    };
+	};
+    },
+
     createNotes: function(voices) {
     	return function() {
     	    return voices.map(function(voice){

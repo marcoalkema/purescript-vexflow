@@ -1,11 +1,12 @@
 module Music where
 
-data Pitch = C | D | E | F | G | A | B
+data Pitch      = C | D | E | F | G | A | B
 data Accidental = DoubleFlat | Flat | Natural | Sharp | DoubleSharp
-type Duration = SixtyFourth | ThirtySecond | Sixteenth | Eighth | Quarter | Half | Whole
+data Duration   = Regular | Irregular
+data Regular    = SixtyFourth | ThirtySecond | Sixteenth | Eighth | Quarter | Half | Whole
+data Irregular  = Tuplet
 
-
-type Note = { pitch      :: Pitch
-            , accidental :: Accidental
-            , duration   :: Duration
-            }
+-- type Note = { pitch      :: Pitch
+--             , accidental :: Accidental
+--             , duration   :: Duration
+--             }
