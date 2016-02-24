@@ -3,6 +3,7 @@ module Music where
 import VexFlow as Vx
 import Prelude
 import Data.List
+import Data.Tuple
 
 data Pitch      = C | D | E | F | G | A | B
 data Accidental = DoubleFlat | Flat | Natural | Sharp | DoubleSharp
@@ -22,12 +23,11 @@ type Note_ = { pitch      :: Pitch
              , octave     :: Int
              }
 
-type VexNote_ = { note     :: Array Note
+type VexNote_ = { note     :: Array Note_
                 , duration :: Duration
                 }
               
 type VexPitch = String
-            
 
 cis :: Note
 cis = { pitch      : C
@@ -79,3 +79,15 @@ accidentalIndex note = toList [durationToInt note.duration]
 aap :: Vx.VexNote
 aap = noteToVexNote cis
 -- noteToVexNote note = {pitch: ["b/5"], duration: "h"}
+
+checkVexAccidental_ :: Note_ -> Boolean
+checkVexAccidental_ note = if note.accidental /= Natural then
+                             true
+                           else
+                             false
+
+zipVexArray :: Array VexNote_ -> List (Tuple Int VexNote_)
+zipVexArray vexArray = Data.List.Lazy.zip (Data.List.Lazy.iterate (+1) 0) (Data.List.Lazy.toList vexArray)
+
+checkVexAccidental :: VexNote_ -> Boolean
+checkVexAccidental vexNote = map (\Tuple a b -> checkVexAccidental a) vexNote.note
