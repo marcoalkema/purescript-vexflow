@@ -3,7 +3,7 @@ module VexFlow where
 import Prelude
 import Control.Monad.Eff
 import Data.List
-
+import Data.Tuple
 
 foreign import data VEXFLOW       :: !
 foreign import data Canvas        :: *

@@ -17,9 +17,10 @@ main = do
   ctx <- Vx.createCtx renderer
   stave <- Vx.createStave 1.0 1.0 500.0
   Vx.createKeySignature "D" stave
-  Vx.drawStave stave "treble" ctx  
-  notes <- Vx.createNotes voices
-  voicing <- Vx.addNotesToVoice notes (Vx.createNewVoice 4.0 4.0)
+  Vx.drawStave stave "treble" ctx
+  -- voicesIndex <- (voiceIndex listVoice)
+  notes <- Vx.createNotes voices666
+  voicing <- Vx.addNotesToVoice notes (Vx.createNewVoice 4.0 4.0)  
   Vx.formatter voicing 500.0
   Vx.drawVoice ctx stave voicing
   
@@ -36,13 +37,24 @@ voices = [[{pitch: ["c/4", "f/4", "g/4"], duration: "h"}
            ]
           ]
 
--- voiceIndex :: forall a b. Array a -> List (Tuple a b)
--- voiceIndex voice = Data.List.Lazy.zip (toList voice) (Data.List.Lazy.iterate (+1) 0)
+voices666 :: Vx.Bar
+voices666 = [[M.aap]]
 
--- accidentals :: forall a b. List (Tuple a b) -> List (Array Int)
+listVoice :: List Vx.Bar
+listVoice = Data.List.Lazy.toList [voices]
+
+barIndex :: List Vx.Bar -> List (Tuple Int Vx.Bar)
+barIndex voices' = Data.List.Lazy.zip (Data.List.Lazy.iterate (+1) 0) voices'
+-- Zip lazy list with individual notes, not bars, maybe voices
+
+-- listVoice :: List VexNote
+-- listVoice voice = Data.List.Lazy.toList voice
+
+-- voiceIndex :: Vx.Note -> List (Tuple Int Vx.Voice)
+-- voiceIndex voice = Data.List.Lazy.zip (Data.List.Lazy.iterate (+1) 0) voice
+
+-- accidentals :: forall a b. Array (Tuple a b) -> List (Array Int)
 -- accidentals voice = map (\Tuple a b -> if a.accidental /= M.Natural then [b] else []) voice
-
-
 
 -- hasAccidental :: Voice -> Array Int
 -- hasAccidental voice = if voice.accidental != natural then

@@ -58,16 +58,14 @@ module.exports = {
     },
 
     createNotes: function(voices) {
-    	return function() {
-    	    return voices.map(function(voice){
-    		console.log("createNotes " + (JSON.stringify(voice)));
+    	    return function() {
+    		return voices.map(function(voice){
+    		    console.log("createNotes " + (JSON.stringify(voice)));
     		    return voice.map(function(note){
-    			return (new Vex.Flow.StaveNote({ keys: note.pitch, duration: note.duration}));
-			
+    			return (new Vex.Flow.StaveNote({ keys: note.pitch, duration: note.duration}));	
     		    });
-    	    });
-    	};
-	
+    		});
+    	    };
     },
 			 
     createNewVoice: function(numBeats) {
