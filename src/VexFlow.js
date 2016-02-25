@@ -57,6 +57,12 @@ module.exports = {
 	};
     },
 
+    logger: function(item) {
+	return function() {
+	    console.log("Logger :" + item);
+	};
+    },
+    
     createNotes: function(voices) {
     	    return function() {
     		return voices.map(function(voice){

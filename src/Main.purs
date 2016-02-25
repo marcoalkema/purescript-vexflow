@@ -18,11 +18,11 @@ main = do
   stave <- Vx.createStave 1.0 1.0 500.0
   Vx.createKeySignature "D" stave
   Vx.drawStave stave "treble" ctx
-  -- voicesIndex <- (voiceIndex listVoice)
-  notes <- Vx.createNotes voices666
+  notes <- Vx.createNotes voicesCis
   voicing <- Vx.addNotesToVoice notes (Vx.createNewVoice 4.0 4.0)  
   Vx.formatter voicing 500.0
   Vx.drawVoice ctx stave voicing
+  Vx.logger Music.kip
   
 voices :: Vx.Bar
 voices = [[{pitch: ["c/4", "f/4", "g/4"], duration: "h"}
@@ -37,8 +37,8 @@ voices = [[{pitch: ["c/4", "f/4", "g/4"], duration: "h"}
            ]
           ]
 
-voices666 :: Vx.Bar
-voices666 = [[M.vexCis]]
+voicesCis :: Vx.Bar
+voicesCis = [[M.vexCis]]
 
 listVoice :: List Vx.Bar
 listVoice = Data.List.Lazy.toList [voices]

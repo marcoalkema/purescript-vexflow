@@ -12,6 +12,8 @@ data Accidental = DoubleFlat | Flat | Natural | Sharp | DoubleSharp
 derive instance genericAccidental :: Generic Accidental
 instance eqAccidental :: Eq Accidental where
   eq = gEq
+instance showAccidental :: Show Accidental where
+  show = gShow 
 
 type Octave     = Int
 data Duration   = Even Regular| Tuplet Irregular 
@@ -123,6 +125,8 @@ filterAccidentals vexNotesIndex = Data.List.Lazy.filter isNatural vexNotesIndex
 vexnoteToIndexedAccidentals :: VexFlowNote -> Data.List.Lazy.List (Tuple Int Accidental)
 vexnoteToIndexedAccidentals vexFlowNote = filterAccidentals $ addIndexToAccidentals $ extractAccidentals vexFlowNote
 
+kip :: Data.List.Lazy.List (Tuple Int Accidental)
+kip = vexnoteToIndexedAccidentals cIS
 -- vexnoteToIndexedAccidentals2 :: VexFlowNote -> Data.List.Lazy.List (Tuple Int Accidental)
 -- vexnoteToIndexedAccidentals2 vexFlowNote = do
 --   accidentals <- extractAccidentals vexFlowNote

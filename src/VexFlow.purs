@@ -2,8 +2,10 @@ module VexFlow where
 
 import Prelude
 import Control.Monad.Eff
-import Data.List
+-- import Data.List
+import Data.List.Lazy
 import Data.Tuple
+-- data Accidental = DoubleFlat | Flat | Natural | Sharp | DoubleSharp
 
 foreign import data VEXFLOW       :: !
 foreign import data Canvas        :: *
@@ -33,7 +35,7 @@ foreign import createStave        :: Number -> Number -> Number -> VexFlowEff
 -- Eff in DOM
 foreign import drawStave          :: VexFlow -> Clef -> VexFlow -> VexFlowEff
 foreign import createKeySignature :: KeySignature -> VexFlow -> VexFlowEff
-
+foreign import logger             :: forall a. Data.List.Lazy.List (Tuple Int a) -> VexFlowEff
 foreign import createNotes        :: Bar -> VexFlowEff
 foreign import createNewVoice     :: Number -> Number -> VexFlowEff
 foreign import addNotesToVoice    :: VexFlow  -> VexFlowEff -> VexFlowEff

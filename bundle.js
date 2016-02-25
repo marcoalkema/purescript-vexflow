@@ -614,7 +614,669 @@ module.exports = {
     runSTArray: $foreign.runSTArray
 };
 
-},{"./foreign":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Array.ST/foreign.js","Control.Monad.Eff":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Control.Monad.Eff/index.js","Control.Monad.ST":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Control.Monad.ST/index.js","Data.Maybe":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Maybe/index.js","Prelude":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Prelude/index.js"}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Bifoldable/index.js":[function(require,module,exports){
+},{"./foreign":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Array.ST/foreign.js","Control.Monad.Eff":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Control.Monad.Eff/index.js","Control.Monad.ST":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Control.Monad.ST/index.js","Data.Maybe":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Maybe/index.js","Prelude":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Prelude/index.js"}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Array/foreign.js":[function(require,module,exports){
+/* global exports */
+"use strict";
+
+// module Data.Array
+
+//------------------------------------------------------------------------------
+// Array creation --------------------------------------------------------------
+//------------------------------------------------------------------------------
+
+exports.range = function (start) {
+  return function (end) {
+    var step = start > end ? -1 : 1;
+    var result = [];
+    for (var i = start, n = 0; i !== end; i += step) {
+      result[n++] = i;
+    }
+    result[n] = i;
+    return result;
+  };
+};
+
+exports.replicate = function (n) {
+  return function (v) {
+    if (n < 1) return [];
+    var r = new Array(n);
+    for (var i = 0; i < n; i++) r[i] = v;
+    return r;
+  };
+};
+
+//------------------------------------------------------------------------------
+// Array size ------------------------------------------------------------------
+//------------------------------------------------------------------------------
+
+exports.length = function (xs) {
+  return xs.length;
+};
+
+//------------------------------------------------------------------------------
+// Extending arrays ------------------------------------------------------------
+//------------------------------------------------------------------------------
+
+exports.cons = function (e) {
+  return function (l) {
+    return [e].concat(l);
+  };
+};
+
+exports.snoc = function (l) {
+  return function (e) {
+    var l1 = l.slice();
+    l1.push(e);
+    return l1;
+  };
+};
+
+//------------------------------------------------------------------------------
+// Non-indexed reads -----------------------------------------------------------
+//------------------------------------------------------------------------------
+
+exports["uncons'"] = function (empty) {
+  return function (next) {
+    return function (xs) {
+      return xs.length === 0 ? empty({}) : next(xs[0])(xs.slice(1));
+    };
+  };
+};
+
+//------------------------------------------------------------------------------
+// Indexed operations ----------------------------------------------------------
+//------------------------------------------------------------------------------
+
+exports.indexImpl = function (just) {
+  return function (nothing) {
+    return function (xs) {
+      return function (i) {
+        return i < 0 || i >= xs.length ? nothing :  just(xs[i]);
+      };
+    };
+  };
+};
+
+exports.findIndexImpl = function (just) {
+  return function (nothing) {
+    return function (f) {
+      return function (xs) {
+        for (var i = 0, l = xs.length; i < l; i++) {
+          if (f(xs[i])) return just(i);
+        }
+        return nothing;
+      };
+    };
+  };
+};
+
+exports.findLastIndexImpl = function (just) {
+  return function (nothing) {
+    return function (f) {
+      return function (xs) {
+        for (var i = xs.length - 1; i >= 0; i--) {
+          if (f(xs[i])) return just(i);
+        }
+        return nothing;
+      };
+    };
+  };
+};
+
+exports._insertAt = function (just) {
+  return function (nothing) {
+    return function (i) {
+      return function (a) {
+        return function (l) {
+          if (i < 0 || i > l.length) return nothing;
+          var l1 = l.slice();
+          l1.splice(i, 0, a);
+          return just(l1);
+        };
+      };
+    };
+  };
+};
+
+exports._deleteAt = function (just) {
+  return function (nothing) {
+    return function (i) {
+      return function (l) {
+        if (i < 0 || i >= l.length) return nothing;
+        var l1 = l.slice();
+        l1.splice(i, 1);
+        return just(l1);
+      };
+    };
+  };
+};
+
+exports._updateAt = function (just) {
+  return function (nothing) {
+    return function (i) {
+      return function (a) {
+        return function (l) {
+          if (i < 0 || i >= l.length) return nothing;
+          var l1 = l.slice();
+          l1[i] = a;
+          return just(l1);
+        };
+      };
+    };
+  };
+};
+
+//------------------------------------------------------------------------------
+// Transformations -------------------------------------------------------------
+//------------------------------------------------------------------------------
+
+exports.reverse = function (l) {
+  return l.slice().reverse();
+};
+
+exports.concat = function (xss) {
+  var result = [];
+  for (var i = 0, l = xss.length; i < l; i++) {
+    var xs = xss[i];
+    for (var j = 0, m = xs.length; j < m; j++) {
+      result.push(xs[j]);
+    }
+  }
+  return result;
+};
+
+exports.filter = function (f) {
+  return function (xs) {
+    return xs.filter(f);
+  };
+};
+
+//------------------------------------------------------------------------------
+// Sorting ---------------------------------------------------------------------
+//------------------------------------------------------------------------------
+
+exports.sortImpl = function (f) {
+  return function (l) {
+    /* jshint maxparams: 2 */
+    return l.slice().sort(function (x, y) {
+      return f(x)(y);
+    });
+  };
+};
+
+//------------------------------------------------------------------------------
+// Subarrays -------------------------------------------------------------------
+//------------------------------------------------------------------------------
+
+exports.slice = function (s) {
+  return function (e) {
+    return function (l) {
+      return l.slice(s, e);
+    };
+  };
+};
+
+exports.drop = function (n) {
+  return function (l) {
+    return n < 1 ? l : l.slice(n);
+  };
+};
+
+//------------------------------------------------------------------------------
+// Zipping ---------------------------------------------------------------------
+//------------------------------------------------------------------------------
+
+exports.zipWith = function (f) {
+  return function (xs) {
+    return function (ys) {
+      var l = xs.length < ys.length ? xs.length : ys.length;
+      var result = new Array(l);
+      for (var i = 0; i < l; i++) {
+        result[i] = f(xs[i])(ys[i]);
+      }
+      return result;
+    };
+  };
+};
+
+},{}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Array/index.js":[function(require,module,exports){
+// Generated by psc version 0.7.6.1
+"use strict";
+var $foreign = require("./foreign");
+var Prelude = require("Prelude");
+var Control_Alt = require("Control.Alt");
+var Control_Alternative = require("Control.Alternative");
+var Control_Lazy = require("Control.Lazy");
+var Control_MonadPlus = require("Control.MonadPlus");
+var Control_Plus = require("Control.Plus");
+var Data_Foldable = require("Data.Foldable");
+var Data_Functor_Invariant = require("Data.Functor.Invariant");
+var Data_Maybe = require("Data.Maybe");
+var Data_Monoid = require("Data.Monoid");
+var Data_Traversable = require("Data.Traversable");
+var Data_Tuple = require("Data.Tuple");
+var Data_Maybe_Unsafe = require("Data.Maybe.Unsafe");
+var $colon = $foreign.cons;
+var $dot$dot = $foreign.range;
+var zipWithA = function (__dict_Applicative_0) {
+    return function (f) {
+        return function (xs) {
+            return function (ys) {
+                return Data_Traversable.sequence(Data_Traversable.traversableArray)(__dict_Applicative_0)($foreign.zipWith(f)(xs)(ys));
+            };
+        };
+    };
+};
+var zip = $foreign.zipWith(Data_Tuple.Tuple.create);
+var updateAt = $foreign._updateAt(Data_Maybe.Just.create)(Data_Maybe.Nothing.value);
+var unzip = $foreign["uncons'"](function (_9) {
+    return new Data_Tuple.Tuple([  ], [  ]);
+})(function (_10) {
+    return function (ts) {
+        var _15 = unzip(ts);
+        return new Data_Tuple.Tuple($colon(_10.value0)(_15.value0), $colon(_10.value1)(_15.value1));
+    };
+});
+var uncons = $foreign["uncons'"](Prelude["const"](Data_Maybe.Nothing.value))(function (x) {
+    return function (xs) {
+        return new Data_Maybe.Just({
+            head: x, 
+            tail: xs
+        });
+    };
+});
+var take = $foreign.slice(0);
+var tail = $foreign["uncons'"](Prelude["const"](Data_Maybe.Nothing.value))(function (_7) {
+    return function (xs) {
+        return new Data_Maybe.Just(xs);
+    };
+});
+var span = function (p) {
+    var go = function (__copy_acc) {
+        return function (__copy_xs) {
+            var acc = __copy_acc;
+            var xs = __copy_xs;
+            tco: while (true) {
+                var _21 = uncons(xs);
+                if (_21 instanceof Data_Maybe.Just && p(_21.value0.head)) {
+                    var __tco_acc = $colon(_21.value0.head)(acc);
+                    acc = __tco_acc;
+                    xs = _21.value0.tail;
+                    continue tco;
+                };
+                return {
+                    init: $foreign.reverse(acc), 
+                    rest: xs
+                };
+            };
+        };
+    };
+    return go([  ]);
+};
+var takeWhile = function (p) {
+    return function (xs) {
+        return (span(p)(xs)).init;
+    };
+};
+var sortBy = function (comp) {
+    return function (xs) {
+        var comp$prime = function (x) {
+            return function (y) {
+                var _25 = comp(x)(y);
+                if (_25 instanceof Prelude.GT) {
+                    return 1;
+                };
+                if (_25 instanceof Prelude.EQ) {
+                    return 0;
+                };
+                if (_25 instanceof Prelude.LT) {
+                    return -1;
+                };
+                throw new Error("Failed pattern match at Data.Array line 409, column 3 - line 414, column 1: " + [ _25.constructor.name ]);
+            };
+        };
+        return $foreign.sortImpl(comp$prime)(xs);
+    };
+};
+var sort = function (__dict_Ord_1) {
+    return function (xs) {
+        return sortBy(Prelude.compare(__dict_Ord_1))(xs);
+    };
+};
+var singleton = function (a) {
+    return [ a ];
+};
+var replicateM = function (__dict_Monad_2) {
+    return function (n) {
+        return function (m) {
+            if (n < 1) {
+                return Prelude["return"](__dict_Monad_2["__superclass_Prelude.Applicative_0"]())([  ]);
+            };
+            if (Prelude.otherwise) {
+                return Data_Traversable.sequence(Data_Traversable.traversableArray)(__dict_Monad_2["__superclass_Prelude.Applicative_0"]())($foreign.replicate(n)(m));
+            };
+            throw new Error("Failed pattern match at Data.Array line 136, column 1 - line 137, column 1: " + [ n.constructor.name, m.constructor.name ]);
+        };
+    };
+};
+var $$null = function (xs) {
+    return $foreign.length(xs) === 0;
+};
+var nubBy = function (eq) {
+    return function (xs) {
+        var _28 = uncons(xs);
+        if (_28 instanceof Data_Maybe.Just) {
+            return $colon(_28.value0.head)(nubBy(eq)($foreign.filter(function (y) {
+                return !eq(_28.value0.head)(y);
+            })(_28.value0.tail)));
+        };
+        if (_28 instanceof Data_Maybe.Nothing) {
+            return [  ];
+        };
+        throw new Error("Failed pattern match: " + [ _28.constructor.name ]);
+    };
+};
+var nub = function (__dict_Eq_3) {
+    return nubBy(Prelude.eq(__dict_Eq_3));
+};
+var some = function (__dict_Alternative_4) {
+    return function (__dict_Lazy_5) {
+        return function (v) {
+            return Prelude["<*>"]((__dict_Alternative_4["__superclass_Prelude.Applicative_0"]())["__superclass_Prelude.Apply_0"]())(Prelude["<$>"](((__dict_Alternative_4["__superclass_Control.Plus.Plus_1"]())["__superclass_Control.Alt.Alt_0"]())["__superclass_Prelude.Functor_0"]())($colon)(v))(Control_Lazy.defer(__dict_Lazy_5)(function (_5) {
+                return many(__dict_Alternative_4)(__dict_Lazy_5)(v);
+            }));
+        };
+    };
+};
+var many = function (__dict_Alternative_6) {
+    return function (__dict_Lazy_7) {
+        return function (v) {
+            return Control_Alt["<|>"]((__dict_Alternative_6["__superclass_Control.Plus.Plus_1"]())["__superclass_Control.Alt.Alt_0"]())(some(__dict_Alternative_6)(__dict_Lazy_7)(v))(Prelude.pure(__dict_Alternative_6["__superclass_Prelude.Applicative_0"]())([  ]));
+        };
+    };
+};
+var insertAt = $foreign._insertAt(Data_Maybe.Just.create)(Data_Maybe.Nothing.value);
+var init = function (xs) {
+    if ($$null(xs)) {
+        return Data_Maybe.Nothing.value;
+    };
+    if (Prelude.otherwise) {
+        return new Data_Maybe.Just($foreign.slice(0)($foreign.length(xs) - 1)(xs));
+    };
+    throw new Error("Failed pattern match at Data.Array line 226, column 1 - line 227, column 1: " + [ xs.constructor.name ]);
+};
+var index = $foreign.indexImpl(Data_Maybe.Just.create)(Data_Maybe.Nothing.value);
+var $bang$bang = index;
+var last = function (xs) {
+    return $bang$bang(xs)($foreign.length(xs) - 1);
+};
+var modifyAt = function (i) {
+    return function (f) {
+        return function (xs) {
+            var go = function (x) {
+                return updateAt(i)(f(x))(xs);
+            };
+            return Data_Maybe.maybe(Data_Maybe.Nothing.value)(go)($bang$bang(xs)(i));
+        };
+    };
+};
+var head = $foreign["uncons'"](Prelude["const"](Data_Maybe.Nothing.value))(function (x) {
+    return function (_6) {
+        return new Data_Maybe.Just(x);
+    };
+});
+var groupBy = function (op) {
+    var go = function (__copy_acc) {
+        return function (__copy_xs) {
+            var acc = __copy_acc;
+            var xs = __copy_xs;
+            tco: while (true) {
+                var _33 = uncons(xs);
+                if (_33 instanceof Data_Maybe.Just) {
+                    var sp = span(op(_33.value0.head))(_33.value0.tail);
+                    var __tco_acc = $colon($colon(_33.value0.head)(sp.init))(acc);
+                    acc = __tco_acc;
+                    xs = sp.rest;
+                    continue tco;
+                };
+                if (_33 instanceof Data_Maybe.Nothing) {
+                    return $foreign.reverse(acc);
+                };
+                throw new Error("Failed pattern match at Data.Array line 476, column 1 - line 477, column 1: " + [ _33.constructor.name ]);
+            };
+        };
+    };
+    return go([  ]);
+};
+var group = function (__dict_Eq_8) {
+    return function (xs) {
+        return groupBy(Prelude.eq(__dict_Eq_8))(xs);
+    };
+};
+var group$prime = function (__dict_Ord_9) {
+    return function (_47) {
+        return group(__dict_Ord_9["__superclass_Prelude.Eq_0"]())(sort(__dict_Ord_9)(_47));
+    };
+};
+var foldM = function (__dict_Monad_10) {
+    return function (f) {
+        return function (a) {
+            return $foreign["uncons'"](function (_11) {
+                return Prelude["return"](__dict_Monad_10["__superclass_Prelude.Applicative_0"]())(a);
+            })(function (b) {
+                return function (bs) {
+                    return Prelude[">>="](__dict_Monad_10["__superclass_Prelude.Bind_1"]())(f(a)(b))(function (a$prime) {
+                        return foldM(__dict_Monad_10)(f)(a$prime)(bs);
+                    });
+                };
+            });
+        };
+    };
+};
+var findLastIndex = $foreign.findLastIndexImpl(Data_Maybe.Just.create)(Data_Maybe.Nothing.value);
+var insertBy = function (cmp) {
+    return function (x) {
+        return function (ys) {
+            var i = Data_Maybe.maybe(0)(function (_0) {
+                return _0 + 1 | 0;
+            })(findLastIndex(function (y) {
+                return Prelude["=="](Prelude.eqOrdering)(cmp(x)(y))(Prelude.GT.value);
+            })(ys));
+            return Data_Maybe_Unsafe.fromJust(insertAt(i)(x)(ys));
+        };
+    };
+};
+var insert = function (__dict_Ord_11) {
+    return insertBy(Prelude.compare(__dict_Ord_11));
+};
+var findIndex = $foreign.findIndexImpl(Data_Maybe.Just.create)(Data_Maybe.Nothing.value);
+var intersectBy = function (eq) {
+    return function (xs) {
+        return function (ys) {
+            return $foreign.filter(function (x) {
+                return Data_Maybe.isJust(findIndex(eq(x))(ys));
+            })(xs);
+        };
+    };
+};
+var intersect = function (__dict_Eq_12) {
+    return intersectBy(Prelude.eq(__dict_Eq_12));
+};
+var filterM = function (__dict_Monad_13) {
+    return function (p) {
+        return $foreign["uncons'"](function (_8) {
+            return Prelude.pure(__dict_Monad_13["__superclass_Prelude.Applicative_0"]())([  ]);
+        })(function (x) {
+            return function (xs) {
+                return Prelude.bind(__dict_Monad_13["__superclass_Prelude.Bind_1"]())(p(x))(function (_4) {
+                    return Prelude.bind(__dict_Monad_13["__superclass_Prelude.Bind_1"]())(filterM(__dict_Monad_13)(p)(xs))(function (_3) {
+                        return Prelude["return"](__dict_Monad_13["__superclass_Prelude.Applicative_0"]())((function () {
+                            if (_4) {
+                                return $colon(x)(_3);
+                            };
+                            if (!_4) {
+                                return _3;
+                            };
+                            throw new Error("Failed pattern match: " + [ _4.constructor.name ]);
+                        })());
+                    });
+                });
+            };
+        });
+    };
+};
+var elemLastIndex = function (__dict_Eq_14) {
+    return function (x) {
+        return findLastIndex(function (_2) {
+            return Prelude["=="](__dict_Eq_14)(_2)(x);
+        });
+    };
+};
+var elemIndex = function (__dict_Eq_15) {
+    return function (x) {
+        return findIndex(function (_1) {
+            return Prelude["=="](__dict_Eq_15)(_1)(x);
+        });
+    };
+};
+var dropWhile = function (p) {
+    return function (xs) {
+        return (span(p)(xs)).rest;
+    };
+};
+var deleteAt = $foreign._deleteAt(Data_Maybe.Just.create)(Data_Maybe.Nothing.value);
+var deleteBy = function (eq) {
+    return function (x) {
+        return function (_12) {
+            if (_12.length === 0) {
+                return [  ];
+            };
+            return Data_Maybe.maybe(_12)(function (i) {
+                return Data_Maybe_Unsafe.fromJust(deleteAt(i)(_12));
+            })(findIndex(eq(x))(_12));
+        };
+    };
+};
+var unionBy = function (eq) {
+    return function (xs) {
+        return function (ys) {
+            return Prelude["++"](Prelude.semigroupArray)(xs)(Data_Foldable.foldl(Data_Foldable.foldableArray)(Prelude.flip(deleteBy(eq)))(nubBy(eq)(ys))(xs));
+        };
+    };
+};
+var union = function (__dict_Eq_16) {
+    return unionBy(Prelude["=="](__dict_Eq_16));
+};
+var $$delete = function (__dict_Eq_17) {
+    return deleteBy(Prelude.eq(__dict_Eq_17));
+};
+var $bslash$bslash = function (__dict_Eq_18) {
+    return function (xs) {
+        return function (ys) {
+            if ($$null(xs)) {
+                return [  ];
+            };
+            if (Prelude.otherwise) {
+                return $foreign["uncons'"](Prelude["const"](xs))(function (y) {
+                    return function (ys_2) {
+                        return $bslash$bslash(__dict_Eq_18)($$delete(__dict_Eq_18)(y)(xs))(ys_2);
+                    };
+                })(ys);
+            };
+            throw new Error("Failed pattern match: " + [ xs.constructor.name, ys.constructor.name ]);
+        };
+    };
+};
+var concatMap = Prelude.flip(Prelude.bind(Prelude.bindArray));
+var mapMaybe = function (f) {
+    return concatMap(function (_48) {
+        return Data_Maybe.maybe([  ])(singleton)(f(_48));
+    });
+};
+var catMaybes = mapMaybe(Prelude.id(Prelude.categoryFn));
+var alterAt = function (i) {
+    return function (f) {
+        return function (xs) {
+            var go = function (x) {
+                var _45 = f(x);
+                if (_45 instanceof Data_Maybe.Nothing) {
+                    return deleteAt(i)(xs);
+                };
+                if (_45 instanceof Data_Maybe.Just) {
+                    return updateAt(i)(_45.value0)(xs);
+                };
+                throw new Error("Failed pattern match at Data.Array line 349, column 3 - line 358, column 1: " + [ _45.constructor.name ]);
+            };
+            return Data_Maybe.maybe(Data_Maybe.Nothing.value)(go)($bang$bang(xs)(i));
+        };
+    };
+};
+module.exports = {
+    foldM: foldM, 
+    unzip: unzip, 
+    zip: zip, 
+    zipWithA: zipWithA, 
+    intersectBy: intersectBy, 
+    intersect: intersect, 
+    "\\\\": $bslash$bslash, 
+    deleteBy: deleteBy, 
+    "delete": $$delete, 
+    unionBy: unionBy, 
+    union: union, 
+    nubBy: nubBy, 
+    nub: nub, 
+    groupBy: groupBy, 
+    "group'": group$prime, 
+    group: group, 
+    span: span, 
+    dropWhile: dropWhile, 
+    takeWhile: takeWhile, 
+    take: take, 
+    sortBy: sortBy, 
+    sort: sort, 
+    catMaybes: catMaybes, 
+    mapMaybe: mapMaybe, 
+    filterM: filterM, 
+    concatMap: concatMap, 
+    alterAt: alterAt, 
+    modifyAt: modifyAt, 
+    updateAt: updateAt, 
+    deleteAt: deleteAt, 
+    insertAt: insertAt, 
+    findLastIndex: findLastIndex, 
+    findIndex: findIndex, 
+    elemLastIndex: elemLastIndex, 
+    elemIndex: elemIndex, 
+    index: index, 
+    "!!": $bang$bang, 
+    uncons: uncons, 
+    init: init, 
+    tail: tail, 
+    last: last, 
+    head: head, 
+    insertBy: insertBy, 
+    insert: insert, 
+    ":": $colon, 
+    "null": $$null, 
+    many: many, 
+    some: some, 
+    replicateM: replicateM, 
+    "..": $dot$dot, 
+    singleton: singleton, 
+    zipWith: $foreign.zipWith, 
+    drop: $foreign.drop, 
+    slice: $foreign.slice, 
+    filter: $foreign.filter, 
+    concat: $foreign.concat, 
+    reverse: $foreign.reverse, 
+    snoc: $foreign.snoc, 
+    cons: $foreign.cons, 
+    length: $foreign.length, 
+    replicate: $foreign.replicate, 
+    range: $foreign.range
+};
+
+},{"./foreign":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Array/foreign.js","Control.Alt":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Control.Alt/index.js","Control.Alternative":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Control.Alternative/index.js","Control.Lazy":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Control.Lazy/index.js","Control.MonadPlus":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Control.MonadPlus/index.js","Control.Plus":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Control.Plus/index.js","Data.Foldable":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Foldable/index.js","Data.Functor.Invariant":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Functor.Invariant/index.js","Data.Maybe":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Maybe/index.js","Data.Maybe.Unsafe":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Maybe.Unsafe/index.js","Data.Monoid":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Monoid/index.js","Data.Traversable":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Traversable/index.js","Data.Tuple":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Tuple/index.js","Prelude":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Prelude/index.js"}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Bifoldable/index.js":[function(require,module,exports){
 // Generated by psc version 0.7.6.1
 "use strict";
 var Prelude = require("Prelude");
@@ -864,7 +1526,403 @@ module.exports = {
     bitraverse: bitraverse
 };
 
-},{"Data.Bifoldable":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Bifoldable/index.js","Data.Bifunctor":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Bifunctor/index.js","Prelude":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Prelude/index.js"}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Foldable/foreign.js":[function(require,module,exports){
+},{"Data.Bifoldable":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Bifoldable/index.js","Data.Bifunctor":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Bifunctor/index.js","Prelude":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Prelude/index.js"}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Char/foreign.js":[function(require,module,exports){
+/* global exports */
+"use strict";
+
+// module Data.Char
+
+exports.toString = function (c) {
+  return c;
+};
+
+exports.toCharCode = function (c) {
+  return c.charCodeAt(0);
+};
+
+exports.fromCharCode = function (c) {
+  return String.fromCharCode(c);
+};
+
+exports.toLower = function (c) {
+  return c.toLowerCase();
+};
+
+exports.toUpper = function (c) {
+  return c.toUpperCase();
+};
+
+},{}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Char/index.js":[function(require,module,exports){
+// Generated by psc version 0.7.6.1
+"use strict";
+var $foreign = require("./foreign");
+var Prelude = require("Prelude");
+module.exports = {
+    toUpper: $foreign.toUpper, 
+    toLower: $foreign.toLower, 
+    toCharCode: $foreign.toCharCode, 
+    fromCharCode: $foreign.fromCharCode, 
+    toString: $foreign.toString
+};
+
+},{"./foreign":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Char/foreign.js","Prelude":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Prelude/index.js"}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Either/index.js":[function(require,module,exports){
+// Generated by psc version 0.7.6.1
+"use strict";
+var Prelude = require("Prelude");
+var Control_Alt = require("Control.Alt");
+var Control_Extend = require("Control.Extend");
+var Data_Bifoldable = require("Data.Bifoldable");
+var Data_Bifunctor = require("Data.Bifunctor");
+var Data_Bitraversable = require("Data.Bitraversable");
+var Data_Foldable = require("Data.Foldable");
+var Data_Monoid = require("Data.Monoid");
+var Data_Traversable = require("Data.Traversable");
+var Left = (function () {
+    function Left(value0) {
+        this.value0 = value0;
+    };
+    Left.create = function (value0) {
+        return new Left(value0);
+    };
+    return Left;
+})();
+var Right = (function () {
+    function Right(value0) {
+        this.value0 = value0;
+    };
+    Right.create = function (value0) {
+        return new Right(value0);
+    };
+    return Right;
+})();
+var showEither = function (__dict_Show_2) {
+    return function (__dict_Show_3) {
+        return new Prelude.Show(function (_7) {
+            if (_7 instanceof Left) {
+                return "Left (" + (Prelude.show(__dict_Show_2)(_7.value0) + ")");
+            };
+            if (_7 instanceof Right) {
+                return "Right (" + (Prelude.show(__dict_Show_3)(_7.value0) + ")");
+            };
+            throw new Error("Failed pattern match at Data.Either line 174, column 1 - line 181, column 1: " + [ _7.constructor.name ]);
+        });
+    };
+};
+var functorEither = new Prelude.Functor(function (f) {
+    return function (_2) {
+        if (_2 instanceof Left) {
+            return new Left(_2.value0);
+        };
+        if (_2 instanceof Right) {
+            return new Right(f(_2.value0));
+        };
+        throw new Error("Failed pattern match at Data.Either line 52, column 1 - line 56, column 1: " + [ f.constructor.name, _2.constructor.name ]);
+    };
+});
+var foldableEither = new Data_Foldable.Foldable(function (__dict_Monoid_8) {
+    return function (f) {
+        return function (_14) {
+            if (_14 instanceof Left) {
+                return Data_Monoid.mempty(__dict_Monoid_8);
+            };
+            if (_14 instanceof Right) {
+                return f(_14.value0);
+            };
+            throw new Error("Failed pattern match at Data.Either line 201, column 1 - line 209, column 1: " + [ f.constructor.name, _14.constructor.name ]);
+        };
+    };
+}, function (f) {
+    return function (z) {
+        return function (_13) {
+            if (_13 instanceof Left) {
+                return z;
+            };
+            if (_13 instanceof Right) {
+                return f(z)(_13.value0);
+            };
+            throw new Error("Failed pattern match at Data.Either line 201, column 1 - line 209, column 1: " + [ f.constructor.name, z.constructor.name, _13.constructor.name ]);
+        };
+    };
+}, function (f) {
+    return function (z) {
+        return function (_12) {
+            if (_12 instanceof Left) {
+                return z;
+            };
+            if (_12 instanceof Right) {
+                return f(_12.value0)(z);
+            };
+            throw new Error("Failed pattern match at Data.Either line 201, column 1 - line 209, column 1: " + [ f.constructor.name, z.constructor.name, _12.constructor.name ]);
+        };
+    };
+});
+var traversableEither = new Data_Traversable.Traversable(function () {
+    return foldableEither;
+}, function () {
+    return functorEither;
+}, function (__dict_Applicative_1) {
+    return function (_19) {
+        if (_19 instanceof Left) {
+            return Prelude.pure(__dict_Applicative_1)(new Left(_19.value0));
+        };
+        if (_19 instanceof Right) {
+            return Prelude["<$>"]((__dict_Applicative_1["__superclass_Prelude.Apply_0"]())["__superclass_Prelude.Functor_0"]())(Right.create)(_19.value0);
+        };
+        throw new Error("Failed pattern match at Data.Either line 217, column 1 - line 223, column 1: " + [ _19.constructor.name ]);
+    };
+}, function (__dict_Applicative_0) {
+    return function (f) {
+        return function (_18) {
+            if (_18 instanceof Left) {
+                return Prelude.pure(__dict_Applicative_0)(new Left(_18.value0));
+            };
+            if (_18 instanceof Right) {
+                return Prelude["<$>"]((__dict_Applicative_0["__superclass_Prelude.Apply_0"]())["__superclass_Prelude.Functor_0"]())(Right.create)(f(_18.value0));
+            };
+            throw new Error("Failed pattern match at Data.Either line 217, column 1 - line 223, column 1: " + [ f.constructor.name, _18.constructor.name ]);
+        };
+    };
+});
+var extendEither = new Control_Extend.Extend(function () {
+    return functorEither;
+}, function (f) {
+    return function (_6) {
+        if (_6 instanceof Left) {
+            return new Left(_6.value0);
+        };
+        return new Right(f(_6));
+    };
+});
+var eqEither = function (__dict_Eq_9) {
+    return function (__dict_Eq_10) {
+        return new Prelude.Eq(function (_8) {
+            return function (_9) {
+                if (_8 instanceof Left && _9 instanceof Left) {
+                    return Prelude["=="](__dict_Eq_9)(_8.value0)(_9.value0);
+                };
+                if (_8 instanceof Right && _9 instanceof Right) {
+                    return Prelude["=="](__dict_Eq_10)(_8.value0)(_9.value0);
+                };
+                return false;
+            };
+        });
+    };
+};
+var ordEither = function (__dict_Ord_6) {
+    return function (__dict_Ord_7) {
+        return new Prelude.Ord(function () {
+            return eqEither(__dict_Ord_6["__superclass_Prelude.Eq_0"]())(__dict_Ord_7["__superclass_Prelude.Eq_0"]());
+        }, function (_10) {
+            return function (_11) {
+                if (_10 instanceof Left && _11 instanceof Left) {
+                    return Prelude.compare(__dict_Ord_6)(_10.value0)(_11.value0);
+                };
+                if (_10 instanceof Right && _11 instanceof Right) {
+                    return Prelude.compare(__dict_Ord_7)(_10.value0)(_11.value0);
+                };
+                if (_10 instanceof Left) {
+                    return Prelude.LT.value;
+                };
+                if (_11 instanceof Left) {
+                    return Prelude.GT.value;
+                };
+                throw new Error("Failed pattern match at Data.Either line 191, column 1 - line 197, column 1: " + [ _10.constructor.name, _11.constructor.name ]);
+            };
+        });
+    };
+};
+var either = function (f) {
+    return function (g) {
+        return function (_1) {
+            if (_1 instanceof Left) {
+                return f(_1.value0);
+            };
+            if (_1 instanceof Right) {
+                return g(_1.value0);
+            };
+            throw new Error("Failed pattern match at Data.Either line 28, column 1 - line 29, column 1: " + [ f.constructor.name, g.constructor.name, _1.constructor.name ]);
+        };
+    };
+};
+var isLeft = either(Prelude["const"](true))(Prelude["const"](false));
+var isRight = either(Prelude["const"](false))(Prelude["const"](true));
+var boundedEither = function (__dict_Bounded_11) {
+    return function (__dict_Bounded_12) {
+        return new Prelude.Bounded(new Left(Prelude.bottom(__dict_Bounded_11)), new Right(Prelude.top(__dict_Bounded_12)));
+    };
+};
+var bifunctorEither = new Data_Bifunctor.Bifunctor(function (f) {
+    return function (g) {
+        return function (_3) {
+            if (_3 instanceof Left) {
+                return new Left(f(_3.value0));
+            };
+            if (_3 instanceof Right) {
+                return new Right(g(_3.value0));
+            };
+            throw new Error("Failed pattern match at Data.Either line 56, column 1 - line 92, column 1: " + [ f.constructor.name, g.constructor.name, _3.constructor.name ]);
+        };
+    };
+});
+var bifoldableEither = new Data_Bifoldable.Bifoldable(function (__dict_Monoid_15) {
+    return function (f) {
+        return function (g) {
+            return function (_17) {
+                if (_17 instanceof Left) {
+                    return f(_17.value0);
+                };
+                if (_17 instanceof Right) {
+                    return g(_17.value0);
+                };
+                throw new Error("Failed pattern match at Data.Either line 209, column 1 - line 217, column 1: " + [ f.constructor.name, g.constructor.name, _17.constructor.name ]);
+            };
+        };
+    };
+}, function (f) {
+    return function (g) {
+        return function (z) {
+            return function (_16) {
+                if (_16 instanceof Left) {
+                    return f(z)(_16.value0);
+                };
+                if (_16 instanceof Right) {
+                    return g(z)(_16.value0);
+                };
+                throw new Error("Failed pattern match at Data.Either line 209, column 1 - line 217, column 1: " + [ f.constructor.name, g.constructor.name, z.constructor.name, _16.constructor.name ]);
+            };
+        };
+    };
+}, function (f) {
+    return function (g) {
+        return function (z) {
+            return function (_15) {
+                if (_15 instanceof Left) {
+                    return f(_15.value0)(z);
+                };
+                if (_15 instanceof Right) {
+                    return g(_15.value0)(z);
+                };
+                throw new Error("Failed pattern match at Data.Either line 209, column 1 - line 217, column 1: " + [ f.constructor.name, g.constructor.name, z.constructor.name, _15.constructor.name ]);
+            };
+        };
+    };
+});
+var bitraversableEither = new Data_Bitraversable.Bitraversable(function () {
+    return bifoldableEither;
+}, function () {
+    return bifunctorEither;
+}, function (__dict_Applicative_14) {
+    return function (_21) {
+        if (_21 instanceof Left) {
+            return Prelude["<$>"]((__dict_Applicative_14["__superclass_Prelude.Apply_0"]())["__superclass_Prelude.Functor_0"]())(Left.create)(_21.value0);
+        };
+        if (_21 instanceof Right) {
+            return Prelude["<$>"]((__dict_Applicative_14["__superclass_Prelude.Apply_0"]())["__superclass_Prelude.Functor_0"]())(Right.create)(_21.value0);
+        };
+        throw new Error("Failed pattern match at Data.Either line 223, column 1 - line 229, column 1: " + [ _21.constructor.name ]);
+    };
+}, function (__dict_Applicative_13) {
+    return function (f) {
+        return function (g) {
+            return function (_20) {
+                if (_20 instanceof Left) {
+                    return Prelude["<$>"]((__dict_Applicative_13["__superclass_Prelude.Apply_0"]())["__superclass_Prelude.Functor_0"]())(Left.create)(f(_20.value0));
+                };
+                if (_20 instanceof Right) {
+                    return Prelude["<$>"]((__dict_Applicative_13["__superclass_Prelude.Apply_0"]())["__superclass_Prelude.Functor_0"]())(Right.create)(g(_20.value0));
+                };
+                throw new Error("Failed pattern match at Data.Either line 223, column 1 - line 229, column 1: " + [ f.constructor.name, g.constructor.name, _20.constructor.name ]);
+            };
+        };
+    };
+});
+var applyEither = new Prelude.Apply(function () {
+    return functorEither;
+}, function (_4) {
+    return function (r) {
+        if (_4 instanceof Left) {
+            return new Left(_4.value0);
+        };
+        if (_4 instanceof Right) {
+            return Prelude["<$>"](functorEither)(_4.value0)(r);
+        };
+        throw new Error("Failed pattern match at Data.Either line 92, column 1 - line 116, column 1: " + [ _4.constructor.name, r.constructor.name ]);
+    };
+});
+var bindEither = new Prelude.Bind(function () {
+    return applyEither;
+}, either(function (e) {
+    return function (_0) {
+        return new Left(e);
+    };
+})(function (a) {
+    return function (f) {
+        return f(a);
+    };
+}));
+var semigroupEither = function (__dict_Semigroup_5) {
+    return new Prelude.Semigroup(function (x) {
+        return function (y) {
+            return Prelude["<*>"](applyEither)(Prelude["<$>"](functorEither)(Prelude.append(__dict_Semigroup_5))(x))(y);
+        };
+    });
+};
+var semiringEither = function (__dict_Semiring_4) {
+    return new Prelude.Semiring(function (x) {
+        return function (y) {
+            return Prelude["<*>"](applyEither)(Prelude["<$>"](functorEither)(Prelude.add(__dict_Semiring_4))(x))(y);
+        };
+    }, function (x) {
+        return function (y) {
+            return Prelude["<*>"](applyEither)(Prelude["<$>"](functorEither)(Prelude.mul(__dict_Semiring_4))(x))(y);
+        };
+    }, new Right(Prelude.one(__dict_Semiring_4)), new Right(Prelude.zero(__dict_Semiring_4)));
+};
+var applicativeEither = new Prelude.Applicative(function () {
+    return applyEither;
+}, Right.create);
+var monadEither = new Prelude.Monad(function () {
+    return applicativeEither;
+}, function () {
+    return bindEither;
+});
+var altEither = new Control_Alt.Alt(function () {
+    return functorEither;
+}, function (_5) {
+    return function (r) {
+        if (_5 instanceof Left) {
+            return r;
+        };
+        return _5;
+    };
+});
+module.exports = {
+    Left: Left, 
+    Right: Right, 
+    isRight: isRight, 
+    isLeft: isLeft, 
+    either: either, 
+    functorEither: functorEither, 
+    bifunctorEither: bifunctorEither, 
+    applyEither: applyEither, 
+    applicativeEither: applicativeEither, 
+    altEither: altEither, 
+    bindEither: bindEither, 
+    monadEither: monadEither, 
+    extendEither: extendEither, 
+    showEither: showEither, 
+    eqEither: eqEither, 
+    ordEither: ordEither, 
+    boundedEither: boundedEither, 
+    foldableEither: foldableEither, 
+    bifoldableEither: bifoldableEither, 
+    traversableEither: traversableEither, 
+    bitraversableEither: bitraversableEither, 
+    semiringEither: semiringEither, 
+    semigroupEither: semigroupEither
+};
+
+},{"Control.Alt":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Control.Alt/index.js","Control.Extend":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Control.Extend/index.js","Data.Bifoldable":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Bifoldable/index.js","Data.Bifunctor":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Bifunctor/index.js","Data.Bitraversable":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Bitraversable/index.js","Data.Foldable":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Foldable/index.js","Data.Monoid":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Monoid/index.js","Data.Traversable":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Traversable/index.js","Prelude":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Prelude/index.js"}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Foldable/foreign.js":[function(require,module,exports){
 /* global exports */
 "use strict";
 
@@ -1394,7 +2452,833 @@ module.exports = {
     invariantArray: invariantArray
 };
 
-},{"Prelude":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Prelude/index.js"}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Lazy/foreign.js":[function(require,module,exports){
+},{"Prelude":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Prelude/index.js"}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Generic/foreign.js":[function(require,module,exports){
+/* global exports */
+"use strict";
+
+// module Data.Generic
+
+
+//------------------------------------------------------------------------------
+// Zipping ---------------------------------------------------------------------
+//------------------------------------------------------------------------------
+
+exports.zipAll = function(f) {
+    return function(xs) {
+        return function(ys) {
+            var l = xs.length < ys.length ? xs.length : ys.length;
+            for (var i = 0; i < l; i++) {
+                if (!f(xs[i])(ys[i])) {
+                    return false;
+                }
+            }
+            return true;
+        };
+    };
+};
+
+exports.zipCompare = function(f) {
+    return function(xs) {
+        return function(ys) {
+            var i = 0;
+            var xlen = xs.length;
+            var ylen = ys.length;
+            while (i < xlen && i < ylen) {
+                var o = f(xs[i])(ys[i]);
+                if (o !== 0) {
+                    return o;
+                }
+                i++;
+            }
+            if (xlen === ylen) {
+                return 0;
+            } else if (xlen > ylen) {
+                return -1;
+            } else {
+                return 1;
+            }
+        };
+    };
+};
+
+},{}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Generic/index.js":[function(require,module,exports){
+// Generated by psc version 0.7.6.1
+"use strict";
+var $foreign = require("./foreign");
+var Prelude = require("Prelude");
+var Data_Either = require("Data.Either");
+var Data_Maybe = require("Data.Maybe");
+var Data_Tuple = require("Data.Tuple");
+var Data_Traversable = require("Data.Traversable");
+var Data_Foldable = require("Data.Foldable");
+var Data_Array = require("Data.Array");
+var Data_String = require("Data.String");
+var Type_Proxy = require("Type.Proxy");
+var Data_Monoid = require("Data.Monoid");
+var SProd = (function () {
+    function SProd(value0, value1) {
+        this.value0 = value0;
+        this.value1 = value1;
+    };
+    SProd.create = function (value0) {
+        return function (value1) {
+            return new SProd(value0, value1);
+        };
+    };
+    return SProd;
+})();
+var SRecord = (function () {
+    function SRecord(value0) {
+        this.value0 = value0;
+    };
+    SRecord.create = function (value0) {
+        return new SRecord(value0);
+    };
+    return SRecord;
+})();
+var SNumber = (function () {
+    function SNumber(value0) {
+        this.value0 = value0;
+    };
+    SNumber.create = function (value0) {
+        return new SNumber(value0);
+    };
+    return SNumber;
+})();
+var SBoolean = (function () {
+    function SBoolean(value0) {
+        this.value0 = value0;
+    };
+    SBoolean.create = function (value0) {
+        return new SBoolean(value0);
+    };
+    return SBoolean;
+})();
+var SInt = (function () {
+    function SInt(value0) {
+        this.value0 = value0;
+    };
+    SInt.create = function (value0) {
+        return new SInt(value0);
+    };
+    return SInt;
+})();
+var SString = (function () {
+    function SString(value0) {
+        this.value0 = value0;
+    };
+    SString.create = function (value0) {
+        return new SString(value0);
+    };
+    return SString;
+})();
+var SChar = (function () {
+    function SChar(value0) {
+        this.value0 = value0;
+    };
+    SChar.create = function (value0) {
+        return new SChar(value0);
+    };
+    return SChar;
+})();
+var SArray = (function () {
+    function SArray(value0) {
+        this.value0 = value0;
+    };
+    SArray.create = function (value0) {
+        return new SArray(value0);
+    };
+    return SArray;
+})();
+var SigProd = (function () {
+    function SigProd(value0, value1) {
+        this.value0 = value0;
+        this.value1 = value1;
+    };
+    SigProd.create = function (value0) {
+        return function (value1) {
+            return new SigProd(value0, value1);
+        };
+    };
+    return SigProd;
+})();
+var SigRecord = (function () {
+    function SigRecord(value0) {
+        this.value0 = value0;
+    };
+    SigRecord.create = function (value0) {
+        return new SigRecord(value0);
+    };
+    return SigRecord;
+})();
+var SigNumber = (function () {
+    function SigNumber() {
+
+    };
+    SigNumber.value = new SigNumber();
+    return SigNumber;
+})();
+var SigBoolean = (function () {
+    function SigBoolean() {
+
+    };
+    SigBoolean.value = new SigBoolean();
+    return SigBoolean;
+})();
+var SigInt = (function () {
+    function SigInt() {
+
+    };
+    SigInt.value = new SigInt();
+    return SigInt;
+})();
+var SigString = (function () {
+    function SigString() {
+
+    };
+    SigString.value = new SigString();
+    return SigString;
+})();
+var SigChar = (function () {
+    function SigChar() {
+
+    };
+    SigChar.value = new SigChar();
+    return SigChar;
+})();
+var SigArray = (function () {
+    function SigArray(value0) {
+        this.value0 = value0;
+    };
+    SigArray.create = function (value0) {
+        return new SigArray(value0);
+    };
+    return SigArray;
+})();
+var Generic = function (fromSpine, toSignature, toSpine) {
+    this.fromSpine = fromSpine;
+    this.toSignature = toSignature;
+    this.toSpine = toSpine;
+};
+var toSpine = function (dict) {
+    return dict.toSpine;
+};
+var toSignature = function (dict) {
+    return dict.toSignature;
+};
+var showArray = function (f) {
+    return function (xs) {
+        return "[ " + (Data_Foldable.intercalate(Data_Foldable.foldableArray)(Data_Monoid.monoidString)(", ")(Prelude.map(Prelude.functorArray)(f)(xs)) + " ]");
+    };
+};
+var isValidSpine = function (_3) {
+    return function (_4) {
+        if (_3 instanceof SigBoolean && _4 instanceof SBoolean) {
+            return true;
+        };
+        if (_3 instanceof SigNumber && _4 instanceof SNumber) {
+            return true;
+        };
+        if (_3 instanceof SigInt && _4 instanceof SInt) {
+            return true;
+        };
+        if (_3 instanceof SigString && _4 instanceof SString) {
+            return true;
+        };
+        if (_3 instanceof SigChar && _4 instanceof SChar) {
+            return true;
+        };
+        if (_3 instanceof SigArray && _4 instanceof SArray) {
+            return Data_Foldable.all(Data_Foldable.foldableArray)(Prelude.booleanAlgebraBoolean)(function (_182) {
+                return isValidSpine(_3.value0(Prelude.unit))(_182(Prelude.unit));
+            })(_4.value0);
+        };
+        if (_3 instanceof SigProd && _4 instanceof SProd) {
+            var _43 = Data_Foldable.find(Data_Foldable.foldableArray)(function (_183) {
+                return Prelude["=="](Prelude.eqString)(_4.value0)((function (_0) {
+                    return _0.sigConstructor;
+                })(_183));
+            })(_3.value1);
+            if (_43 instanceof Data_Maybe.Nothing) {
+                return false;
+            };
+            if (_43 instanceof Data_Maybe.Just) {
+                return Data_Foldable.and(Data_Foldable.foldableArray)(Prelude.booleanAlgebraBoolean)(Data_Array.zipWith(function (sig) {
+                    return function (spine) {
+                        return isValidSpine(sig(Prelude.unit))(spine(Prelude.unit));
+                    };
+                })(_43.value0.sigValues)(_4.value1));
+            };
+            throw new Error("Failed pattern match: " + [ _43.constructor.name ]);
+        };
+        if (_3 instanceof SigRecord && _4 instanceof SRecord) {
+            return Data_Foldable.and(Data_Foldable.foldableArray)(Prelude.booleanAlgebraBoolean)(Data_Array.zipWith(function (sig) {
+                return function (val) {
+                    return isValidSpine(sig.recValue(Prelude.unit))(val.recValue(Prelude.unit));
+                };
+            })(Data_Array.sortBy(function (a) {
+                return function (b) {
+                    return Prelude.compare(Prelude.ordString)(a.recLabel)(b.recLabel);
+                };
+            })(_3.value0))(Data_Array.sortBy(function (a) {
+                return function (b) {
+                    return Prelude.compare(Prelude.ordString)(a.recLabel)(b.recLabel);
+                };
+            })(_4.value0)));
+        };
+        return false;
+    };
+};
+var genericString = new Generic(function (_11) {
+    if (_11 instanceof SString) {
+        return new Data_Maybe.Just(_11.value0);
+    };
+    return Data_Maybe.Nothing.value;
+}, function (_10) {
+    return SigString.value;
+}, function (x) {
+    return new SString(x);
+});
+var genericShowPrec = function (d) {
+    return function (_5) {
+        if (_5 instanceof SProd) {
+            var showParen = function (_29) {
+                return function (x) {
+                    if (!_29) {
+                        return x;
+                    };
+                    if (_29) {
+                        return "(" + (x + ")");
+                    };
+                    throw new Error("Failed pattern match at Data.Generic line 240, column 9 - line 241, column 9: " + [ _29.constructor.name, x.constructor.name ]);
+                };
+            };
+            var _58 = Data_Array["null"](_5.value1);
+            if (_58) {
+                return _5.value0;
+            };
+            if (!_58) {
+                return showParen(d > 10)(_5.value0 + (" " + Data_String.joinWith(" ")(Prelude.map(Prelude.functorArray)(function (x) {
+                    return genericShowPrec(11)(x(Prelude.unit));
+                })(_5.value1))));
+            };
+            throw new Error("Failed pattern match: " + [ _58.constructor.name ]);
+        };
+        if (_5 instanceof SRecord) {
+            return "{" + (Data_String.joinWith(", ")(Prelude.map(Prelude.functorArray)(function (x) {
+                return x.recLabel + (": " + genericShowPrec(0)(x.recValue(Prelude.unit)));
+            })(_5.value0)) + "}");
+        };
+        if (_5 instanceof SBoolean) {
+            return Prelude.show(Prelude.showBoolean)(_5.value0);
+        };
+        if (_5 instanceof SInt) {
+            return Prelude.show(Prelude.showInt)(_5.value0);
+        };
+        if (_5 instanceof SNumber) {
+            return Prelude.show(Prelude.showNumber)(_5.value0);
+        };
+        if (_5 instanceof SString) {
+            return Prelude.show(Prelude.showString)(_5.value0);
+        };
+        if (_5 instanceof SChar) {
+            return Prelude.show(Prelude.showChar)(_5.value0);
+        };
+        if (_5 instanceof SArray) {
+            return "[" + (Data_String.joinWith(", ")(Prelude.map(Prelude.functorArray)(function (x) {
+                return genericShowPrec(0)(x(Prelude.unit));
+            })(_5.value0)) + "]");
+        };
+        throw new Error("Failed pattern match: " + [ d.constructor.name, _5.constructor.name ]);
+    };
+};
+var genericNumber = new Generic(function (_7) {
+    if (_7 instanceof SNumber) {
+        return new Data_Maybe.Just(_7.value0);
+    };
+    return Data_Maybe.Nothing.value;
+}, function (_6) {
+    return SigNumber.value;
+}, function (x) {
+    return new SNumber(x);
+});
+var genericInt = new Generic(function (_9) {
+    if (_9 instanceof SInt) {
+        return new Data_Maybe.Just(_9.value0);
+    };
+    return Data_Maybe.Nothing.value;
+}, function (_8) {
+    return SigInt.value;
+}, function (x) {
+    return new SInt(x);
+});
+var genericChar = new Generic(function (_13) {
+    if (_13 instanceof SChar) {
+        return new Data_Maybe.Just(_13.value0);
+    };
+    return Data_Maybe.Nothing.value;
+}, function (_12) {
+    return SigChar.value;
+}, function (x) {
+    return new SChar(x);
+});
+var genericBool = new Generic(function (_15) {
+    if (_15 instanceof SBoolean) {
+        return new Data_Maybe.Just(_15.value0);
+    };
+    return Data_Maybe.Nothing.value;
+}, function (_14) {
+    return SigBoolean.value;
+}, function (b) {
+    return new SBoolean(b);
+});
+var gShow = function (__dict_Generic_0) {
+    return function (_184) {
+        return genericShowPrec(0)(toSpine(__dict_Generic_0)(_184));
+    };
+};
+var fromSpine = function (dict) {
+    return dict.fromSpine;
+};
+var force = function (_1) {
+    return _1(Prelude.unit);
+};
+var showSignature = function (sig) {
+    var needsParen = function (s) {
+        if (s instanceof SigProd) {
+            return true;
+        };
+        if (s instanceof SigRecord) {
+            return true;
+        };
+        if (s instanceof SigNumber) {
+            return false;
+        };
+        if (s instanceof SigBoolean) {
+            return false;
+        };
+        if (s instanceof SigInt) {
+            return false;
+        };
+        if (s instanceof SigString) {
+            return false;
+        };
+        if (s instanceof SigChar) {
+            return false;
+        };
+        if (s instanceof SigArray) {
+            return true;
+        };
+        throw new Error("Failed pattern match at Data.Generic line 75, column 3 - line 79, column 3: " + [ s.constructor.name ]);
+    };
+    var paren = function (s) {
+        if (needsParen(s)) {
+            return "(" + (showSignature(s) + ")");
+        };
+        if (Prelude.otherwise) {
+            return showSignature(s);
+        };
+        throw new Error("Failed pattern match: " + [ s.constructor.name ]);
+    };
+    return Data_Foldable.fold(Data_Foldable.foldableArray)(Data_Monoid.monoidString)((function () {
+        if (sig instanceof SigProd) {
+            return [ "SigProd ", Prelude.show(Prelude.showString)(sig.value0), " ", showArray(showDataConstructor)(sig.value1) ];
+        };
+        if (sig instanceof SigRecord) {
+            return [ "SigRecord ", showArray(showLabel)(sig.value0) ];
+        };
+        if (sig instanceof SigNumber) {
+            return [ "SigNumber" ];
+        };
+        if (sig instanceof SigBoolean) {
+            return [ "SigBoolean" ];
+        };
+        if (sig instanceof SigInt) {
+            return [ "SigInt" ];
+        };
+        if (sig instanceof SigString) {
+            return [ "SigString" ];
+        };
+        if (sig instanceof SigChar) {
+            return [ "SigChar" ];
+        };
+        if (sig instanceof SigArray) {
+            return [ "SigArray ", paren(force(sig.value0)) ];
+        };
+        throw new Error("Failed pattern match: " + [ sig.constructor.name ]);
+    })());
+};
+var showLabel = function (l) {
+    return "{ recLabel: " + (Prelude.show(Prelude.showString)(l.recLabel) + (", recValue: " + (showSignature(force(l.recValue)) + " }")));
+};
+var showDataConstructor = function (dc) {
+    return "{ sigConstructor: " + (Prelude.show(Prelude.showString)(dc.sigConstructor) + (", sigValues: " + (showArray(function (_185) {
+        return showSignature(force(_185));
+    })(dc.sigValues) + "}")));
+};
+var showGenericSignature = new Prelude.Show(showSignature);
+var eqGeneric = new Prelude.Eq(function (_30) {
+    return function (_31) {
+        if (_30 instanceof SProd && _31 instanceof SProd) {
+            return Prelude["=="](Prelude.eqString)(_30.value0)(_31.value0) && (Data_Array.length(_30.value1) === Data_Array.length(_31.value1) && $foreign.zipAll(function (x) {
+                return function (y) {
+                    return Prelude["=="](eqGeneric)(x(Prelude.unit))(y(Prelude.unit));
+                };
+            })(_30.value1)(_31.value1));
+        };
+        if (_30 instanceof SRecord && _31 instanceof SRecord) {
+            var go = function (x) {
+                return function (y) {
+                    return Prelude["=="](Prelude.eqString)(x.recLabel)(y.recLabel) && Prelude["=="](eqGeneric)(x.recValue(Prelude.unit))(y.recValue(Prelude.unit));
+                };
+            };
+            return Data_Array.length(_30.value0) === Data_Array.length(_31.value0) && $foreign.zipAll(go)(_30.value0)(_31.value0);
+        };
+        if (_30 instanceof SInt && _31 instanceof SInt) {
+            return _30.value0 === _31.value0;
+        };
+        if (_30 instanceof SNumber && _31 instanceof SNumber) {
+            return _30.value0 === _31.value0;
+        };
+        if (_30 instanceof SBoolean && _31 instanceof SBoolean) {
+            return Prelude["=="](Prelude.eqBoolean)(_30.value0)(_31.value0);
+        };
+        if (_30 instanceof SChar && _31 instanceof SChar) {
+            return Prelude["=="](Prelude.eqChar)(_30.value0)(_31.value0);
+        };
+        if (_30 instanceof SString && _31 instanceof SString) {
+            return Prelude["=="](Prelude.eqString)(_30.value0)(_31.value0);
+        };
+        if (_30 instanceof SArray && _31 instanceof SArray) {
+            return Data_Array.length(_30.value0) === Data_Array.length(_31.value0) && $foreign.zipAll(function (x) {
+                return function (y) {
+                    return Prelude["=="](eqGeneric)(x(Prelude.unit))(y(Prelude.unit));
+                };
+            })(_30.value0)(_31.value0);
+        };
+        return false;
+    };
+});
+var gEq = function (__dict_Generic_1) {
+    return function (x) {
+        return function (y) {
+            return Prelude["=="](eqGeneric)(toSpine(__dict_Generic_1)(x))(toSpine(__dict_Generic_1)(y));
+        };
+    };
+};
+var ordGeneric = new Prelude.Ord(function () {
+    return eqGeneric;
+}, function (_32) {
+    return function (_33) {
+        if (_32 instanceof SProd && _33 instanceof SProd) {
+            var _109 = Prelude.compare(Prelude.ordString)(_32.value0)(_33.value0);
+            if (_109 instanceof Prelude.EQ) {
+                return Prelude.compare(Prelude.ordInt)(0)($foreign.zipCompare(function (x) {
+                    return function (y) {
+                        var _110 = Prelude.compare(ordGeneric)(x(Prelude.unit))(y(Prelude.unit));
+                        if (_110 instanceof Prelude.EQ) {
+                            return 0;
+                        };
+                        if (_110 instanceof Prelude.LT) {
+                            return 1;
+                        };
+                        if (_110 instanceof Prelude.GT) {
+                            return -1;
+                        };
+                        throw new Error("Failed pattern match: " + [ _110.constructor.name ]);
+                    };
+                })(_32.value1)(_33.value1));
+            };
+            return _109;
+        };
+        if (_32 instanceof SProd) {
+            return Prelude.LT.value;
+        };
+        if (_33 instanceof SProd) {
+            return Prelude.GT.value;
+        };
+        if (_32 instanceof SRecord && _33 instanceof SRecord) {
+            var go = function (x) {
+                return function (y) {
+                    var _119 = Prelude.compare(Prelude.ordString)(x.recLabel)(y.recLabel);
+                    if (_119 instanceof Prelude.EQ) {
+                        var _120 = Prelude.compare(ordGeneric)(x.recValue(Prelude.unit))(y.recValue(Prelude.unit));
+                        if (_120 instanceof Prelude.EQ) {
+                            return 0;
+                        };
+                        if (_120 instanceof Prelude.LT) {
+                            return 1;
+                        };
+                        if (_120 instanceof Prelude.GT) {
+                            return -1;
+                        };
+                        throw new Error("Failed pattern match at Data.Generic line 288, column 15 - line 295, column 5: " + [ _120.constructor.name ]);
+                    };
+                    if (_119 instanceof Prelude.LT) {
+                        return 1;
+                    };
+                    if (_119 instanceof Prelude.GT) {
+                        return -1;
+                    };
+                    throw new Error("Failed pattern match at Data.Generic line 288, column 15 - line 295, column 5: " + [ _119.constructor.name ]);
+                };
+            };
+            return Prelude.compare(Prelude.ordInt)(0)($foreign.zipCompare(go)(_32.value0)(_33.value0));
+        };
+        if (_32 instanceof SRecord) {
+            return Prelude.LT.value;
+        };
+        if (_33 instanceof SRecord) {
+            return Prelude.GT.value;
+        };
+        if (_32 instanceof SInt && _33 instanceof SInt) {
+            return Prelude.compare(Prelude.ordInt)(_32.value0)(_33.value0);
+        };
+        if (_32 instanceof SInt) {
+            return Prelude.LT.value;
+        };
+        if (_33 instanceof SInt) {
+            return Prelude.GT.value;
+        };
+        if (_32 instanceof SBoolean && _33 instanceof SBoolean) {
+            return Prelude.compare(Prelude.ordBoolean)(_32.value0)(_33.value0);
+        };
+        if (_32 instanceof SBoolean) {
+            return Prelude.LT.value;
+        };
+        if (_33 instanceof SBoolean) {
+            return Prelude.GT.value;
+        };
+        if (_32 instanceof SNumber && _33 instanceof SNumber) {
+            return Prelude.compare(Prelude.ordNumber)(_32.value0)(_33.value0);
+        };
+        if (_32 instanceof SNumber) {
+            return Prelude.LT.value;
+        };
+        if (_33 instanceof SNumber) {
+            return Prelude.GT.value;
+        };
+        if (_32 instanceof SString && _33 instanceof SString) {
+            return Prelude.compare(Prelude.ordString)(_32.value0)(_33.value0);
+        };
+        if (_32 instanceof SString) {
+            return Prelude.LT.value;
+        };
+        if (_33 instanceof SString) {
+            return Prelude.GT.value;
+        };
+        if (_32 instanceof SChar && _33 instanceof SChar) {
+            return Prelude.compare(Prelude.ordChar)(_32.value0)(_33.value0);
+        };
+        if (_32 instanceof SChar) {
+            return Prelude.LT.value;
+        };
+        if (_33 instanceof SChar) {
+            return Prelude.GT.value;
+        };
+        if (_32 instanceof SArray && _33 instanceof SArray) {
+            return Prelude.compare(Prelude.ordInt)(0)($foreign.zipCompare(function (x) {
+                return function (y) {
+                    var _145 = Prelude.compare(ordGeneric)(x(Prelude.unit))(y(Prelude.unit));
+                    if (_145 instanceof Prelude.EQ) {
+                        return 0;
+                    };
+                    if (_145 instanceof Prelude.LT) {
+                        return 1;
+                    };
+                    if (_145 instanceof Prelude.GT) {
+                        return -1;
+                    };
+                    throw new Error("Failed pattern match: " + [ _145.constructor.name ]);
+                };
+            })(_32.value0)(_33.value0));
+        };
+        throw new Error("Failed pattern match: " + [ _32.constructor.name, _33.constructor.name ]);
+    };
+});
+var gCompare = function (__dict_Generic_2) {
+    return function (x) {
+        return function (y) {
+            return Prelude.compare(ordGeneric)(toSpine(__dict_Generic_2)(x))(toSpine(__dict_Generic_2)(y));
+        };
+    };
+};
+var anyProxy = Type_Proxy.Proxy.value;
+var genericArray = function (__dict_Generic_3) {
+    return new Generic(function (_16) {
+        if (_16 instanceof SArray) {
+            return Data_Traversable.traverse(Data_Traversable.traversableArray)(Data_Maybe.applicativeMaybe)(function (_186) {
+                return fromSpine(__dict_Generic_3)((function (_2) {
+                    return _2(Prelude.unit);
+                })(_186));
+            })(_16.value0);
+        };
+        return Data_Maybe.Nothing.value;
+    }, function (x) {
+        var lowerProxy = function (_17) {
+            return anyProxy;
+        };
+        return new SigArray(function (unit) {
+            return toSignature(__dict_Generic_3)(lowerProxy(x));
+        });
+    }, function (xs) {
+        return new SArray(Prelude["<$>"](Prelude.functorArray)(function (x) {
+            return function (y) {
+                return toSpine(__dict_Generic_3)(x);
+            };
+        })(xs));
+    });
+};
+var genericEither = function (__dict_Generic_4) {
+    return function (__dict_Generic_5) {
+        return new Generic(function (_26) {
+            if (_26 instanceof SProd && (_26.value0 === "Data.Either.Left" && _26.value1.length === 1)) {
+                return Prelude["<$>"](Data_Maybe.functorMaybe)(Data_Either.Left.create)(fromSpine(__dict_Generic_4)(_26.value1[0](Prelude.unit)));
+            };
+            if (_26 instanceof SProd && (_26.value0 === "Data.Either.Right" && _26.value1.length === 1)) {
+                return Prelude["<$>"](Data_Maybe.functorMaybe)(Data_Either.Right.create)(fromSpine(__dict_Generic_5)(_26.value1[0](Prelude.unit)));
+            };
+            return Data_Maybe.Nothing.value;
+        }, function (x) {
+            var rproxy = function (_28) {
+                return anyProxy;
+            };
+            var lproxy = function (_27) {
+                return anyProxy;
+            };
+            return new SigProd("Data.Either.Either", [ {
+                sigConstructor: "Data.Either.Left", 
+                sigValues: [ function (u) {
+                    return toSignature(__dict_Generic_4)(lproxy(x));
+                } ]
+            }, {
+                sigConstructor: "Data.Either.Right", 
+                sigValues: [ function (u) {
+                    return toSignature(__dict_Generic_5)(rproxy(x));
+                } ]
+            } ]);
+        }, function (_25) {
+            if (_25 instanceof Data_Either.Left) {
+                return new SProd("Data.Either.Left", [ function (u) {
+                    return toSpine(__dict_Generic_4)(_25.value0);
+                } ]);
+            };
+            if (_25 instanceof Data_Either.Right) {
+                return new SProd("Data.Either.Right", [ function (u) {
+                    return toSpine(__dict_Generic_5)(_25.value0);
+                } ]);
+            };
+            throw new Error("Failed pattern match at Data.Generic line 214, column 1 - line 235, column 1: " + [ _25.constructor.name ]);
+        });
+    };
+};
+var genericMaybe = function (__dict_Generic_6) {
+    return new Generic(function (_23) {
+        if (_23 instanceof SProd && (_23.value0 === "Data.Maybe.Just" && _23.value1.length === 1)) {
+            return Prelude["<$>"](Data_Maybe.functorMaybe)(Data_Maybe.Just.create)(fromSpine(__dict_Generic_6)(_23.value1[0](Prelude.unit)));
+        };
+        if (_23 instanceof SProd && (_23.value0 === "Data.Maybe.Nothing" && _23.value1.length === 0)) {
+            return Prelude["return"](Data_Maybe.applicativeMaybe)(Data_Maybe.Nothing.value);
+        };
+        return Data_Maybe.Nothing.value;
+    }, function (x) {
+        var mbProxy = function (_24) {
+            return anyProxy;
+        };
+        return new SigProd("Data.Maybe.Maybe", [ {
+            sigConstructor: "Data.Maybe.Just", 
+            sigValues: [ function (u) {
+                return toSignature(__dict_Generic_6)(mbProxy(x));
+            } ]
+        }, {
+            sigConstructor: "Data.Maybe.Nothing", 
+            sigValues: [  ]
+        } ]);
+    }, function (_22) {
+        if (_22 instanceof Data_Maybe.Just) {
+            return new SProd("Data.Maybe.Just", [ function (u) {
+                return toSpine(__dict_Generic_6)(_22.value0);
+            } ]);
+        };
+        if (_22 instanceof Data_Maybe.Nothing) {
+            return new SProd("Data.Maybe.Nothing", [  ]);
+        };
+        throw new Error("Failed pattern match at Data.Generic line 197, column 1 - line 214, column 1: " + [ _22.constructor.name ]);
+    });
+};
+var genericTuple = function (__dict_Generic_7) {
+    return function (__dict_Generic_8) {
+        return new Generic(function (_19) {
+            if (_19 instanceof SProd && (_19.value0 === "Data.Tuple.Tuple" && _19.value1.length === 2)) {
+                return Prelude["<*>"](Data_Maybe.applyMaybe)(Prelude["<$>"](Data_Maybe.functorMaybe)(Data_Tuple.Tuple.create)(fromSpine(__dict_Generic_7)(_19.value1[0](Prelude.unit))))(fromSpine(__dict_Generic_8)(_19.value1[1](Prelude.unit)));
+            };
+            return Data_Maybe.Nothing.value;
+        }, function (x) {
+            var sndProxy = function (_21) {
+                return anyProxy;
+            };
+            var fstProxy = function (_20) {
+                return anyProxy;
+            };
+            return new SigProd("Data.Tuple.Tuple", [ {
+                sigConstructor: "Data.Tuple.Tuple", 
+                sigValues: [ function (u) {
+                    return toSignature(__dict_Generic_7)(fstProxy(x));
+                }, function (u) {
+                    return toSignature(__dict_Generic_8)(sndProxy(x));
+                } ]
+            } ]);
+        }, function (_18) {
+            return new SProd("Data.Tuple.Tuple", [ function (u) {
+                return toSpine(__dict_Generic_7)(_18.value0);
+            }, function (u) {
+                return toSpine(__dict_Generic_8)(_18.value1);
+            } ]);
+        });
+    };
+};
+module.exports = {
+    SigProd: SigProd, 
+    SigRecord: SigRecord, 
+    SigNumber: SigNumber, 
+    SigBoolean: SigBoolean, 
+    SigInt: SigInt, 
+    SigString: SigString, 
+    SigChar: SigChar, 
+    SigArray: SigArray, 
+    SProd: SProd, 
+    SRecord: SRecord, 
+    SNumber: SNumber, 
+    SBoolean: SBoolean, 
+    SInt: SInt, 
+    SString: SString, 
+    SChar: SChar, 
+    SArray: SArray, 
+    Generic: Generic, 
+    gCompare: gCompare, 
+    gEq: gEq, 
+    gShow: gShow, 
+    isValidSpine: isValidSpine, 
+    showDataConstructor: showDataConstructor, 
+    showSignature: showSignature, 
+    fromSpine: fromSpine, 
+    toSignature: toSignature, 
+    toSpine: toSpine, 
+    showGenericSignature: showGenericSignature, 
+    genericNumber: genericNumber, 
+    genericInt: genericInt, 
+    genericString: genericString, 
+    genericChar: genericChar, 
+    genericBool: genericBool, 
+    genericArray: genericArray, 
+    genericTuple: genericTuple, 
+    genericMaybe: genericMaybe, 
+    genericEither: genericEither, 
+    eqGeneric: eqGeneric, 
+    ordGeneric: ordGeneric
+};
+
+},{"./foreign":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Generic/foreign.js","Data.Array":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Array/index.js","Data.Either":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Either/index.js","Data.Foldable":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Foldable/index.js","Data.Maybe":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Maybe/index.js","Data.Monoid":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Monoid/index.js","Data.String":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.String/index.js","Data.Traversable":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Traversable/index.js","Data.Tuple":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Tuple/index.js","Prelude":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Prelude/index.js","Type.Proxy":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Type.Proxy/index.js"}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Lazy/foreign.js":[function(require,module,exports){
 /* global exports */
 "use strict";
 
@@ -4060,7 +5944,37 @@ module.exports = {
     monoidLast: monoidLast
 };
 
-},{"Control.Comonad":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Control.Comonad/index.js","Control.Extend":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Control.Extend/index.js","Data.Functor.Invariant":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Functor.Invariant/index.js","Data.Maybe":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Maybe/index.js","Data.Monoid":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Monoid/index.js","Prelude":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Prelude/index.js"}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Maybe/index.js":[function(require,module,exports){
+},{"Control.Comonad":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Control.Comonad/index.js","Control.Extend":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Control.Extend/index.js","Data.Functor.Invariant":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Functor.Invariant/index.js","Data.Maybe":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Maybe/index.js","Data.Monoid":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Monoid/index.js","Prelude":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Prelude/index.js"}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Maybe.Unsafe/foreign.js":[function(require,module,exports){
+/* global exports */
+"use strict";
+
+// module Data.Maybe.Unsafe
+
+exports.unsafeThrow = function (msg) {
+  throw new Error(msg);
+};
+
+},{}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Maybe.Unsafe/index.js":[function(require,module,exports){
+// Generated by psc version 0.7.6.1
+"use strict";
+var $foreign = require("./foreign");
+var Prelude = require("Prelude");
+var Data_Maybe = require("Data.Maybe");
+var fromJust = function (_0) {
+    if (_0 instanceof Data_Maybe.Just) {
+        return _0.value0;
+    };
+    if (_0 instanceof Data_Maybe.Nothing) {
+        return $foreign.unsafeThrow("Data.Maybe.Unsafe.fromJust called on Nothing");
+    };
+    throw new Error("Failed pattern match at Data.Maybe.Unsafe line 10, column 1 - line 11, column 1: " + [ _0.constructor.name ]);
+};
+module.exports = {
+    fromJust: fromJust, 
+    unsafeThrow: $foreign.unsafeThrow
+};
+
+},{"./foreign":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Maybe.Unsafe/foreign.js","Data.Maybe":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Maybe/index.js","Prelude":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Prelude/index.js"}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Maybe/index.js":[function(require,module,exports){
 // Generated by psc version 0.7.6.1
 "use strict";
 var Prelude = require("Prelude");
@@ -4998,7 +6912,298 @@ module.exports = {
     monoidArray: monoidArray
 };
 
-},{"Prelude":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Prelude/index.js"}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Traversable/foreign.js":[function(require,module,exports){
+},{"Prelude":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Prelude/index.js"}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.String.Unsafe/foreign.js":[function(require,module,exports){
+/* global exports */
+"use strict";
+
+// module Data.String.Unsafe
+
+exports.charCodeAt = function (i) {
+  return function (s) {
+    if (i >= 0 && i < s.length) return s.charCodeAt(i);
+    throw new Error("Data.String.Unsafe.charCodeAt: Invalid index.");
+  };
+};
+
+exports.charAt = function (i) {
+  return function (s) {
+    if (i >= 0 && i < s.length) return s.charAt(i);
+    throw new Error("Data.String.Unsafe.charAt: Invalid index.");
+  };
+};
+
+exports.char = function (s) {
+  if (s.length === 1) return s.charAt(0);
+  throw new Error("Data.String.Unsafe.char: Expected string of length 1.");
+};
+
+},{}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.String.Unsafe/index.js":[function(require,module,exports){
+// Generated by psc version 0.7.6.1
+"use strict";
+var $foreign = require("./foreign");
+module.exports = {
+    charCodeAt: $foreign.charCodeAt, 
+    charAt: $foreign.charAt, 
+    "char": $foreign["char"]
+};
+
+},{"./foreign":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.String.Unsafe/foreign.js"}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.String/foreign.js":[function(require,module,exports){
+/* global exports */
+"use strict";
+
+// module Data.String
+
+exports._charAt = function (just) {
+  return function (nothing) {
+    return function (i) {
+      return function (s) {
+        return i >= 0 && i < s.length ? just(s.charAt(i)) : nothing;
+      };
+    };
+  };
+};
+
+exports._charCodeAt = function (just) {
+  return function (nothing) {
+    return function (i) {
+      return function (s) {
+        return i >= 0 && i < s.length ? just(s.charCodeAt(i)) : nothing;
+      };
+    };
+  };
+};
+
+exports._toChar = function (just) {
+  return function (nothing) {
+    return function (s) {
+      return s.length === 1 ? just(s) : nothing;
+    };
+  };
+};
+
+exports.fromCharArray = function (a) {
+  return a.join("");
+};
+
+exports._indexOf = function (just) {
+  return function (nothing) {
+    return function (x) {
+      return function (s) {
+        var i = s.indexOf(x);
+        return i === -1 ? nothing : just(i);
+      };
+    };
+  };
+};
+
+exports["_indexOf'"] = function (just) {
+  return function (nothing) {
+    return function (x) {
+      return function (startAt) {
+        return function (s) {
+          if (startAt < 0 || startAt > s.length) return nothing;
+          var i = s.indexOf(x, startAt);
+          return i === -1 ? nothing : just(i);
+        };
+      };
+    };
+  };
+};
+
+exports._lastIndexOf = function (just) {
+  return function (nothing) {
+    return function (x) {
+      return function (s) {
+        var i = s.lastIndexOf(x);
+        return i === -1 ? nothing : just(i);
+      };
+    };
+  };
+};
+
+exports["_lastIndexOf'"] = function (just) {
+  return function (nothing) {
+    return function (x) {
+      return function (startAt) {
+        return function (s) {
+          if (startAt < 0 || startAt > s.length) return nothing;
+          var i = s.lastIndexOf(x, startAt);
+          return i === -1 ? nothing : just(i);
+        };
+      };
+    };
+  };
+};
+
+exports.length = function (s) {
+  return s.length;
+};
+
+exports._localeCompare = function (lt) {
+  return function (eq) {
+    return function (gt) {
+      return function (s1) {
+        return function (s2) {
+          var result = s1.localeCompare(s2);
+          return result < 0 ? lt : result > 0 ? gt : eq;
+        };
+      };
+    };
+  };
+};
+
+exports.replace = function (s1) {
+  return function (s2) {
+    return function (s3) {
+      return s3.replace(s1, s2);
+    };
+  };
+};
+
+exports.take = function (n) {
+  return function (s) {
+    return s.substr(0, n);
+  };
+};
+
+exports.drop = function (n) {
+  return function (s) {
+    return s.substr(n);
+  };
+};
+
+exports.count = function (p) {
+  return function (s) {
+    for (var i = 0; i < s.length && p(s.charAt(i)); i++); {}
+    return i;
+  };
+};
+
+exports.split = function (sep) {
+  return function (s) {
+    return s.split(sep);
+  };
+};
+
+exports.toCharArray = function (s) {
+  return s.split("");
+};
+
+exports.toLower = function (s) {
+  return s.toLowerCase();
+};
+
+exports.toUpper = function (s) {
+  return s.toUpperCase();
+};
+
+exports.trim = function (s) {
+  return s.trim();
+};
+
+exports.joinWith = function (s) {
+  return function (xs) {
+    return xs.join(s);
+  };
+};
+
+},{}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.String/index.js":[function(require,module,exports){
+// Generated by psc version 0.7.6.1
+"use strict";
+var $foreign = require("./foreign");
+var Prelude = require("Prelude");
+var Data_Char = require("Data.Char");
+var Data_Maybe = require("Data.Maybe");
+var Data_Monoid = require("Data.Monoid");
+var Data_String_Unsafe = require("Data.String.Unsafe");
+var uncons = function (_0) {
+    if (_0 === "") {
+        return Data_Maybe.Nothing.value;
+    };
+    return new Data_Maybe.Just({
+        head: Data_String_Unsafe.charAt(0)(_0), 
+        tail: $foreign.drop(1)(_0)
+    });
+};
+var toChar = $foreign._toChar(Data_Maybe.Just.create)(Data_Maybe.Nothing.value);
+var takeWhile = function (p) {
+    return function (s) {
+        return $foreign.take($foreign.count(p)(s))(s);
+    };
+};
+var $$null = function (s) {
+    return $foreign.length(s) === 0;
+};
+var localeCompare = $foreign._localeCompare(Prelude.LT.value)(Prelude.EQ.value)(Prelude.GT.value);
+var lastIndexOf$prime = $foreign["_lastIndexOf'"](Data_Maybe.Just.create)(Data_Maybe.Nothing.value);
+var lastIndexOf = $foreign._lastIndexOf(Data_Maybe.Just.create)(Data_Maybe.Nothing.value);
+var stripSuffix = function (suffix) {
+    return function (str) {
+        var _2 = lastIndexOf(suffix)(str);
+        if (_2 instanceof Data_Maybe.Just && _2.value0 === $foreign.length(str) - $foreign.length(suffix)) {
+            return Data_Maybe.Just.create($foreign.take(_2.value0)(str));
+        };
+        return Data_Maybe.Nothing.value;
+    };
+};
+var indexOf$prime = $foreign["_indexOf'"](Data_Maybe.Just.create)(Data_Maybe.Nothing.value);
+var indexOf = $foreign._indexOf(Data_Maybe.Just.create)(Data_Maybe.Nothing.value);
+var stripPrefix = function (prefix) {
+    return function (str) {
+        var _4 = indexOf(prefix)(str);
+        if (_4 instanceof Data_Maybe.Just && _4.value0 === 0) {
+            return Data_Maybe.Just.create($foreign.drop($foreign.length(prefix))(str));
+        };
+        return Data_Maybe.Nothing.value;
+    };
+};
+var fromChar = Data_Char.toString;
+var singleton = fromChar;
+var dropWhile = function (p) {
+    return function (s) {
+        return $foreign.drop($foreign.count(p)(s))(s);
+    };
+};
+var contains = function (x) {
+    return function (s) {
+        return Data_Maybe.isJust(indexOf(x)(s));
+    };
+};
+var charCodeAt = $foreign._charCodeAt(Data_Maybe.Just.create)(Data_Maybe.Nothing.value);
+var charAt = $foreign._charAt(Data_Maybe.Just.create)(Data_Maybe.Nothing.value);
+module.exports = {
+    stripSuffix: stripSuffix, 
+    stripPrefix: stripPrefix, 
+    dropWhile: dropWhile, 
+    takeWhile: takeWhile, 
+    localeCompare: localeCompare, 
+    singleton: singleton, 
+    uncons: uncons, 
+    "null": $$null, 
+    "lastIndexOf'": lastIndexOf$prime, 
+    lastIndexOf: lastIndexOf, 
+    "indexOf'": indexOf$prime, 
+    indexOf: indexOf, 
+    contains: contains, 
+    toChar: toChar, 
+    fromChar: fromChar, 
+    charCodeAt: charCodeAt, 
+    charAt: charAt, 
+    joinWith: $foreign.joinWith, 
+    trim: $foreign.trim, 
+    toUpper: $foreign.toUpper, 
+    toLower: $foreign.toLower, 
+    toCharArray: $foreign.toCharArray, 
+    split: $foreign.split, 
+    drop: $foreign.drop, 
+    take: $foreign.take, 
+    count: $foreign.count, 
+    replace: $foreign.replace, 
+    length: $foreign.length, 
+    fromCharArray: $foreign.fromCharArray
+};
+
+},{"./foreign":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.String/foreign.js","Data.Char":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Char/index.js","Data.Maybe":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Maybe/index.js","Data.Monoid":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Monoid/index.js","Data.String.Unsafe":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.String.Unsafe/index.js","Prelude":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Prelude/index.js"}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Traversable/foreign.js":[function(require,module,exports){
 /* global exports */
 "use strict";
 
@@ -5921,7 +8126,7 @@ var Music = require("Music");
 var VexFlow = require("VexFlow");
 var Control_Monad_Eff = require("Control.Monad.Eff");
 var Data_Foldable = require("Data.Foldable");
-var voices666 = [ [ Music.aap ] ];
+var voicesCis = [ [ Music.vexCis ] ];
 var voices = [ [ {
     pitch: [ "c/4", "f/4", "g/4" ], 
     duration: "h"
@@ -5954,10 +8159,11 @@ var main = function __do() {
     var _3 = VexFlow.createStave(1.0)(1.0)(500.0)();
     VexFlow.createKeySignature("D")(_3)();
     VexFlow.drawStave(_3)("treble")(_4)();
-    var _2 = VexFlow.createNotes(voices666)();
+    var _2 = VexFlow.createNotes(voicesCis)();
     var _1 = VexFlow.addNotesToVoice(_2)(VexFlow.createNewVoice(4.0)(4.0))();
     VexFlow.formatter(_1)(500.0)();
-    return VexFlow.drawVoice(_4)(_3)(_1)();
+    VexFlow.drawVoice(_4)(_3)(_1)();
+    return VexFlow.logger(Music.kip)();
 };
 var listVoice = Data_List_Lazy.toList(Data_Foldable.foldableArray)([ voices ]);
 var barIndex = function (voices$prime) {
@@ -5968,7 +8174,7 @@ var barIndex = function (voices$prime) {
 module.exports = {
     barIndex: barIndex, 
     listVoice: listVoice, 
-    voices666: voices666, 
+    voicesCis: voicesCis, 
     voices: voices, 
     main: main
 };
@@ -5976,8 +8182,14 @@ module.exports = {
 },{"Control.Monad.Eff":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Control.Monad.Eff/index.js","Data.Foldable":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Foldable/index.js","Data.List.Lazy":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.List.Lazy/index.js","Data.Tuple":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Tuple/index.js","Music":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Music/index.js","Prelude":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Prelude/index.js","VexFlow":"/Users/Alko/Coding/purescript/purescript-vexflow/output/VexFlow/index.js"}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/Music/index.js":[function(require,module,exports){
 // Generated by psc version 0.7.6.1
 "use strict";
+var Data_List_Lazy = require("Data.List.Lazy");
 var VexFlow = require("VexFlow");
 var Prelude = require("Prelude");
+var Data_List = require("Data.List");
+var Data_Tuple = require("Data.Tuple");
+var Data_Generic = require("Data.Generic");
+var Data_Maybe = require("Data.Maybe");
+var Data_Foldable = require("Data.Foldable");
 var SixtyFourth = (function () {
     function SixtyFourth() {
 
@@ -6157,65 +8369,136 @@ var DoubleSharp = (function () {
     DoubleSharp.value = new DoubleSharp();
     return DoubleSharp;
 })();
-var pitchToString = function (_0) {
-    if (_0 instanceof C) {
+var pitchToString = function (_1) {
+    if (_1 instanceof C) {
         return "c";
     };
-    if (_0 instanceof D) {
+    if (_1 instanceof D) {
         return "d";
     };
-    if (_0 instanceof E) {
+    if (_1 instanceof E) {
         return "e";
     };
-    if (_0 instanceof F) {
+    if (_1 instanceof F) {
         return "f";
     };
-    if (_0 instanceof G) {
+    if (_1 instanceof G) {
         return "g";
     };
-    if (_0 instanceof A) {
+    if (_1 instanceof A) {
         return "a";
     };
-    if (_0 instanceof B) {
+    if (_1 instanceof B) {
         return "b";
     };
-    throw new Error("Failed pattern match at Music line 28, column 1 - line 29, column 1: " + [ _0.constructor.name ]);
+    throw new Error("Failed pattern match at Music line 45, column 1 - line 46, column 1: " + [ _1.constructor.name ]);
 };
-var durationToInt = function (_2) {
-    if (_2 instanceof Even && _2.value0 instanceof SixtyFourth) {
+var genericAccidental = new Data_Generic.Generic(function ($dollarx) {
+    if ($dollarx instanceof Data_Generic.SProd && ($dollarx.value0 === "Music.DoubleFlat" && $dollarx.value1.length === 0)) {
+        return new Data_Maybe.Just(DoubleFlat.value);
+    };
+    if ($dollarx instanceof Data_Generic.SProd && ($dollarx.value0 === "Music.Flat" && $dollarx.value1.length === 0)) {
+        return new Data_Maybe.Just(Flat.value);
+    };
+    if ($dollarx instanceof Data_Generic.SProd && ($dollarx.value0 === "Music.Natural" && $dollarx.value1.length === 0)) {
+        return new Data_Maybe.Just(Natural.value);
+    };
+    if ($dollarx instanceof Data_Generic.SProd && ($dollarx.value0 === "Music.Sharp" && $dollarx.value1.length === 0)) {
+        return new Data_Maybe.Just(Sharp.value);
+    };
+    if ($dollarx instanceof Data_Generic.SProd && ($dollarx.value0 === "Music.DoubleSharp" && $dollarx.value1.length === 0)) {
+        return new Data_Maybe.Just(DoubleSharp.value);
+    };
+    return Data_Maybe.Nothing.value;
+}, function ($dollarq) {
+    return new Data_Generic.SigProd("Music.Accidental", [ {
+        sigConstructor: "Music.DoubleFlat", 
+        sigValues: [  ]
+    }, {
+        sigConstructor: "Music.Flat", 
+        sigValues: [  ]
+    }, {
+        sigConstructor: "Music.Natural", 
+        sigValues: [  ]
+    }, {
+        sigConstructor: "Music.Sharp", 
+        sigValues: [  ]
+    }, {
+        sigConstructor: "Music.DoubleSharp", 
+        sigValues: [  ]
+    } ]);
+}, function ($dollarx) {
+    if ($dollarx instanceof DoubleFlat) {
+        return new Data_Generic.SProd("Music.DoubleFlat", [  ]);
+    };
+    if ($dollarx instanceof Flat) {
+        return new Data_Generic.SProd("Music.Flat", [  ]);
+    };
+    if ($dollarx instanceof Natural) {
+        return new Data_Generic.SProd("Music.Natural", [  ]);
+    };
+    if ($dollarx instanceof Sharp) {
+        return new Data_Generic.SProd("Music.Sharp", [  ]);
+    };
+    if ($dollarx instanceof DoubleSharp) {
+        return new Data_Generic.SProd("Music.DoubleSharp", [  ]);
+    };
+    throw new Error("Failed pattern match at Music line 12, column 1 - line 13, column 1: " + [ $dollarx.constructor.name ]);
+});
+var extractAccidentals = function (vexFlowNote) {
+    return Prelude.map(Data_List_Lazy.functorList)(function (vexNote) {
+        return vexNote.accidental;
+    })(vexFlowNote.note);
+};
+var eqAccidental = new Prelude.Eq(Data_Generic.gEq(genericAccidental));
+var isNatural = function (_4) {
+    var _19 = Prelude["/="](eqAccidental)(_4.value1)(Natural.value);
+    if (_19) {
+        return true;
+    };
+    if (!_19) {
+        return false;
+    };
+    throw new Error("Failed pattern match at Music line 113, column 1 - line 114, column 1: " + [ _19.constructor.name ]);
+};
+var filterAccidentals = function (vexNotesIndex) {
+    return Data_List_Lazy.filter(isNatural)(vexNotesIndex);
+};
+var durationToInt = function (_3) {
+    if (_3 instanceof Even && _3.value0 instanceof SixtyFourth) {
         return 64;
     };
-    if (_2 instanceof Even && _2.value0 instanceof ThirtySecond) {
+    if (_3 instanceof Even && _3.value0 instanceof ThirtySecond) {
         return 32;
     };
-    if (_2 instanceof Even && _2.value0 instanceof Sixteenth) {
+    if (_3 instanceof Even && _3.value0 instanceof Sixteenth) {
         return 16;
     };
-    if (_2 instanceof Even && _2.value0 instanceof Eighth) {
+    if (_3 instanceof Even && _3.value0 instanceof Eighth) {
         return 8;
     };
-    if (_2 instanceof Even && _2.value0 instanceof Quarter) {
+    if (_3 instanceof Even && _3.value0 instanceof Quarter) {
         return 4;
     };
-    if (_2 instanceof Even && _2.value0 instanceof Half) {
+    if (_3 instanceof Even && _3.value0 instanceof Half) {
         return 2;
     };
-    if (_2 instanceof Even && _2.value0 instanceof Whole) {
+    if (_3 instanceof Even && _3.value0 instanceof Whole) {
         return 1;
     };
-    if (_2 instanceof Tuplet && _2.value0 instanceof Three) {
+    if (_3 instanceof Tuplet && _3.value0 instanceof Three) {
         return 3;
     };
-    if (_2 instanceof Tuplet && _2.value0 instanceof Five) {
+    if (_3 instanceof Tuplet && _3.value0 instanceof Five) {
         return 5;
     };
-    if (_2 instanceof Tuplet && _2.value0 instanceof Six) {
+    if (_3 instanceof Tuplet && _3.value0 instanceof Six) {
         return 6;
     };
-    if (_2 instanceof Tuplet && _2.value0 instanceof Seven) {
+    if (_3 instanceof Tuplet && _3.value0 instanceof Seven) {
         return 7;
     };
-    throw new Error("Failed pattern match at Music line 44, column 1 - line 45, column 1: " + [ _2.constructor.name ]);
+    throw new Error("Failed pattern match at Music line 61, column 1 - line 62, column 1: " + [ _3.constructor.name ]);
 };
 var cis = {
     pitch: C.value, 
@@ -6223,23 +8506,49 @@ var cis = {
     octave: 5, 
     duration: new Even(Whole.value)
 };
-var accidentalToString = function (_1) {
-    if (_1 instanceof DoubleFlat) {
+var cISNote = Data_List_Lazy.toList(Data_Foldable.foldableArray)([ {
+    pitch: C.value, 
+    accidental: Sharp.value, 
+    octave: 5
+}, {
+    pitch: E.value, 
+    accidental: Natural.value, 
+    octave: 5
+}, {
+    pitch: G.value, 
+    accidental: Sharp.value, 
+    octave: 5
+} ]);
+var cIS = {
+    note: cISNote, 
+    duration: new Even(Whole.value)
+};
+var addIndexToAccidentals = function (accidentals) {
+    return Data_List_Lazy.zip(Data_List_Lazy.iterate(function (_0) {
+        return _0 + 1 | 0;
+    })(0))(accidentals);
+};
+var vexnoteToIndexedAccidentals = function (vexFlowNote) {
+    return filterAccidentals(addIndexToAccidentals(extractAccidentals(vexFlowNote)));
+};
+var kip = vexnoteToIndexedAccidentals(cIS);
+var accidentalToString = function (_2) {
+    if (_2 instanceof DoubleFlat) {
         return "bb";
     };
-    if (_1 instanceof Flat) {
+    if (_2 instanceof Flat) {
         return "b";
     };
-    if (_1 instanceof Natural) {
+    if (_2 instanceof Natural) {
         return "";
     };
-    if (_1 instanceof Sharp) {
+    if (_2 instanceof Sharp) {
         return "#";
     };
-    if (_1 instanceof DoubleSharp) {
+    if (_2 instanceof DoubleSharp) {
         return "##";
     };
-    throw new Error("Failed pattern match at Music line 37, column 1 - line 38, column 1: " + [ _1.constructor.name ]);
+    throw new Error("Failed pattern match at Music line 54, column 1 - line 55, column 1: " + [ _2.constructor.name ]);
 };
 var pitchToVexPitch = function (pitch) {
     return function (accidental) {
@@ -6254,7 +8563,10 @@ var noteToVexNote = function (note) {
         duration: Prelude.show(Prelude.showInt)(durationToInt(note.duration))
     };
 };
-var aap = noteToVexNote(cis);
+var vexCis = noteToVexNote(cis);
+var accidentalIndex = function (note) {
+    return Data_List.toList(Data_Foldable.foldableArray)([ durationToInt(note.duration) ]);
+};
 module.exports = {
     Three: Three, 
     Five: Five, 
@@ -6281,16 +8593,27 @@ module.exports = {
     G: G, 
     A: A, 
     B: B, 
-    aap: aap, 
+    kip: kip, 
+    vexnoteToIndexedAccidentals: vexnoteToIndexedAccidentals, 
+    filterAccidentals: filterAccidentals, 
+    isNatural: isNatural, 
+    addIndexToAccidentals: addIndexToAccidentals, 
+    extractAccidentals: extractAccidentals, 
+    cISNote: cISNote, 
+    cIS: cIS, 
+    vexCis: vexCis, 
+    accidentalIndex: accidentalIndex, 
     noteToVexNote: noteToVexNote, 
     pitchToVexPitch: pitchToVexPitch, 
     durationToInt: durationToInt, 
     accidentalToString: accidentalToString, 
     pitchToString: pitchToString, 
-    cis: cis
+    cis: cis, 
+    genericAccidental: genericAccidental, 
+    eqAccidental: eqAccidental
 };
 
-},{"Prelude":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Prelude/index.js","VexFlow":"/Users/Alko/Coding/purescript/purescript-vexflow/output/VexFlow/index.js"}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/Prelude/foreign.js":[function(require,module,exports){
+},{"Data.Foldable":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Foldable/index.js","Data.Generic":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Generic/index.js","Data.List":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.List/index.js","Data.List.Lazy":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.List.Lazy/index.js","Data.Maybe":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Maybe/index.js","Data.Tuple":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Tuple/index.js","Prelude":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Prelude/index.js","VexFlow":"/Users/Alko/Coding/purescript/purescript-vexflow/output/VexFlow/index.js"}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/Prelude/foreign.js":[function(require,module,exports){
 /* global exports */
 "use strict";
 
@@ -7393,7 +9716,37 @@ module.exports = {
     showOrdering: showOrdering
 };
 
-},{"./foreign":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Prelude/foreign.js"}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/VexFlow/foreign.js":[function(require,module,exports){
+},{"./foreign":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Prelude/foreign.js"}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/Type.Proxy/index.js":[function(require,module,exports){
+// Generated by psc version 0.7.6.1
+"use strict";
+var Proxy3 = (function () {
+    function Proxy3() {
+
+    };
+    Proxy3.value = new Proxy3();
+    return Proxy3;
+})();
+var Proxy2 = (function () {
+    function Proxy2() {
+
+    };
+    Proxy2.value = new Proxy2();
+    return Proxy2;
+})();
+var Proxy = (function () {
+    function Proxy() {
+
+    };
+    Proxy.value = new Proxy();
+    return Proxy;
+})();
+module.exports = {
+    Proxy3: Proxy3, 
+    Proxy2: Proxy2, 
+    Proxy: Proxy
+};
+
+},{}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/VexFlow/foreign.js":[function(require,module,exports){
 // module VexFlow
 
 module.exports = {
@@ -7453,6 +9806,12 @@ module.exports = {
 	};
     },
 
+    logger: function(item) {
+	return function() {
+	    console.log("Logger :" + item);
+	};
+    },
+    
     createNotes: function(voices) {
     	    return function() {
     		return voices.map(function(voice){
@@ -7522,7 +9881,7 @@ module.exports = {
 var $foreign = require("./foreign");
 var Prelude = require("Prelude");
 var Control_Monad_Eff = require("Control.Monad.Eff");
-var Data_List = require("Data.List");
+var Data_List_Lazy = require("Data.List.Lazy");
 var Data_Tuple = require("Data.Tuple");
 module.exports = {
     drawVoice: $foreign.drawVoice, 
@@ -7530,6 +9889,7 @@ module.exports = {
     addNotesToVoice: $foreign.addNotesToVoice, 
     createNewVoice: $foreign.createNewVoice, 
     createNotes: $foreign.createNotes, 
+    logger: $foreign.logger, 
     createKeySignature: $foreign.createKeySignature, 
     drawStave: $foreign.drawStave, 
     createStave: $foreign.createStave, 
@@ -7538,7 +9898,7 @@ module.exports = {
     createCanvas: $foreign.createCanvas
 };
 
-},{"./foreign":"/Users/Alko/Coding/purescript/purescript-vexflow/output/VexFlow/foreign.js","Control.Monad.Eff":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Control.Monad.Eff/index.js","Data.List":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.List/index.js","Data.Tuple":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Tuple/index.js","Prelude":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Prelude/index.js"}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/browserify.js":[function(require,module,exports){
+},{"./foreign":"/Users/Alko/Coding/purescript/purescript-vexflow/output/VexFlow/foreign.js","Control.Monad.Eff":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Control.Monad.Eff/index.js","Data.List.Lazy":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.List.Lazy/index.js","Data.Tuple":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Data.Tuple/index.js","Prelude":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Prelude/index.js"}],"/Users/Alko/Coding/purescript/purescript-vexflow/output/browserify.js":[function(require,module,exports){
 require('Main').main();
 
 },{"Main":"/Users/Alko/Coding/purescript/purescript-vexflow/output/Main/index.js"}]},{},["/Users/Alko/Coding/purescript/purescript-vexflow/output/browserify.js"]);
