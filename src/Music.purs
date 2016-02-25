@@ -82,23 +82,18 @@ noteToVexNote note = {pitch    : [pitchToVexPitch note.pitch note.accidental not
 accidentalIndex :: Note -> List Int
 accidentalIndex note = toList [durationToInt note.duration]
                      
-aap :: Vx.VexNote
-aap = noteToVexNote cis
+vexCis :: Vx.VexNote
+vexCis = noteToVexNote cis
 -- noteToVexNote note = {pitch: ["b/5"], duration: "h"}
 
-checkVexAccidental_ :: VexNote -> Boolean
-checkVexAccidental_ note = if note.accidental /= Natural then
-                             true
-                           else
-                             false
 
 cIS :: VexFlowNote
-cIS = { note     : vexArr
+cIS = { note     : cISNote
       , duration : Even Whole
       }
               
-vexArr :: Data.List.Lazy.List VexNote
-vexArr = Data.List.Lazy.toList [ { pitch      : C
+cISNote :: Data.List.Lazy.List VexNote
+cISNote = Data.List.Lazy.toList [ { pitch      : C
                                  , accidental : Sharp
                                  , octave     : 5}
                                , { pitch      : E
@@ -125,8 +120,8 @@ filterAccidentals :: Data.List.Lazy.List (Tuple Int Accidental) -> Data.List.Laz
 filterAccidentals vexNotesIndex = Data.List.Lazy.filter isNatural vexNotesIndex
 
 
-vexnoteToIndexedAccidentals :: Data.List.Lazy.List (Tuple Int Accidental)
-vexnoteToIndexedAccidentals = filterAccidentals $ addIndexToAccidentals $ extractAccidentals cIS
+vexnoteToIndexedAccidentals :: VexFlowNote -> Data.List.Lazy.List (Tuple Int Accidental)
+vexnoteToIndexedAccidentals vexFlowNote = filterAccidentals $ addIndexToAccidentals $ extractAccidentals vexFlowNote
 
 -- vexnoteToIndexedAccidentals2 :: VexFlowNote -> Data.List.Lazy.List (Tuple Int Accidental)
 -- vexnoteToIndexedAccidentals2 vexFlowNote = do

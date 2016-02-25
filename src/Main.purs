@@ -38,7 +38,7 @@ voices = [[{pitch: ["c/4", "f/4", "g/4"], duration: "h"}
           ]
 
 voices666 :: Vx.Bar
-voices666 = [[M.aap]]
+voices666 = [[M.vexCis]]
 
 listVoice :: List Vx.Bar
 listVoice = Data.List.Lazy.toList [voices]
