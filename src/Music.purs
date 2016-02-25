@@ -4,9 +4,15 @@ import VexFlow as Vx
 import Prelude
 import Data.List
 import Data.Tuple
+import Data.Generic
 
 data Pitch      = C | D | E | F | G | A | B
+
 data Accidental = DoubleFlat | Flat | Natural | Sharp | DoubleSharp
+derive instance genericAccidental :: Generic Accidental
+instance eqAccidental :: Eq Accidental where
+  eq = gEq
+
 type Octave     = Int
 data Duration   = Even Regular| Tuplet Irregular 
 data Regular    = SixtyFourth | ThirtySecond | Sixteenth | Eighth | Quarter | Half | Whole
@@ -18,12 +24,12 @@ type Note = { pitch      :: Pitch
             , duration   :: Duration  
             }
             
-type Note_ = { pitch      :: Pitch
+type VexNote = { pitch      :: Pitch
              , accidental :: Accidental
              , octave     :: Int
              }
 
-type VexNote_ = { note     :: Array Note_
+type VexFlowNote = { note     :: Data.List.Lazy.List VexNote
                 , duration :: Duration
                 }
               
@@ -80,14 +86,50 @@ aap :: Vx.VexNote
 aap = noteToVexNote cis
 -- noteToVexNote note = {pitch: ["b/5"], duration: "h"}
 
-checkVexAccidental_ :: Note_ -> Boolean
+checkVexAccidental_ :: VexNote -> Boolean
 checkVexAccidental_ note = if note.accidental /= Natural then
                              true
                            else
                              false
 
-zipVexArray :: Array VexNote_ -> List (Tuple Int VexNote_)
-zipVexArray vexArray = Data.List.Lazy.zip (Data.List.Lazy.iterate (+1) 0) (Data.List.Lazy.toList vexArray)
+cIS :: VexFlowNote
+cIS = { note     : vexArr
+      , duration : Even Whole
+      }
+              
+vexArr :: Data.List.Lazy.List VexNote
+vexArr = Data.List.Lazy.toList [ { pitch      : C
+                                 , accidental : Sharp
+                                 , octave     : 5}
+                               , { pitch      : E
+                                 , accidental : Natural
+                                 , octave     : 5}
+                               , { pitch      : G
+                                 , accidental : Sharp
+                                 , octave     : 5
+                                 }]
 
-checkVexAccidental :: VexNote_ -> Boolean
-checkVexAccidental vexNote = map (\Tuple a b -> checkVexAccidental a) vexNote.note
+extractAccidentals :: VexFlowNote -> Data.List.Lazy.List Accidental
+extractAccidentals vexFlowNote = map (\vexNote -> vexNote.accidental) vexFlowNote.note
+
+addIndexToAccidentals :: Data.List.Lazy.List Accidental -> Data.List.Lazy.List (Tuple Int Accidental)
+addIndexToAccidentals accidentals = Data.List.Lazy.zip (Data.List.Lazy.iterate (+1) 0) accidentals
+
+isNatural :: (Tuple Int Accidental) -> Boolean
+isNatural (Tuple a b) = if b /= Natural then
+                             true
+                           else
+                             false
+
+filterAccidentals :: Data.List.Lazy.List (Tuple Int Accidental) -> Data.List.Lazy.List (Tuple Int Accidental)
+filterAccidentals vexNotesIndex = Data.List.Lazy.filter isNatural vexNotesIndex
+
+
+vexnoteToIndexedAccidentals :: Data.List.Lazy.List (Tuple Int Accidental)
+vexnoteToIndexedAccidentals = filterAccidentals $ addIndexToAccidentals $ extractAccidentals cIS
+
+-- vexnoteToIndexedAccidentals2 :: VexFlowNote -> Data.List.Lazy.List (Tuple Int Accidental)
+-- vexnoteToIndexedAccidentals2 vexFlowNote = do
+--   accidentals <- extractAccidentals vexFlowNote
+--   indexedAccidentals <- addIndexToAccidentals accidentals
+--   filterAccidentals indexedAccidentals
