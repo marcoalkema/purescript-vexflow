@@ -2,8 +2,8 @@ module VexFlow where
 
 import Prelude
 import Control.Monad.Eff
--- import Data.List
-import Data.List.Lazy
+import Music
+import VexMusic
 import Data.Tuple
 -- data Accidental = DoubleFlat | Flat | Natural | Sharp | DoubleSharp
 
@@ -14,20 +14,6 @@ foreign import data DOM           :: !
 type CanvasEff = Eff (dom         :: DOM) Canvas
 type VexFlowEff = Eff (dom        :: DOM) VexFlow
 
-type Clef = String
-type Pitch = String
-type Duration = String
-type Note = { pitch               :: Pitch
-             , duration           :: Duration
-             }
-type VexNote = {pitch             :: Array Pitch
-                ,duration         :: Duration}
-type Voice = Array VexNote
-type Voice2 = List VexNote
-type Bar = Array Voice
-type Octave = Number
-type KeySignature = String
-
 foreign import createCanvas       :: String -> CanvasEff
 foreign import createRenderer     :: Canvas -> VexFlowEff
 foreign import createCtx          :: VexFlow -> VexFlowEff
@@ -36,7 +22,7 @@ foreign import createStave        :: Number -> Number -> Number -> VexFlowEff
 foreign import drawStave          :: VexFlow -> Clef -> VexFlow -> VexFlowEff
 foreign import createKeySignature :: KeySignature -> VexFlow -> VexFlowEff
 foreign import logger             :: forall a. Array (Tuple Int a) -> VexFlowEff
-foreign import createNotes        :: Bar -> VexFlowEff
+foreign import createNotes        :: VexFlowBar -> VexFlowEff
 foreign import createNewVoice     :: Number -> Number -> VexFlowEff
 foreign import addNotesToVoice    :: VexFlow  -> VexFlowEff -> VexFlowEff
 foreign import formatter          :: VexFlow -> Number -> VexFlowEff
