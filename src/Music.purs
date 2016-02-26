@@ -2,7 +2,7 @@ module Music where
 
 import VexFlow as Vx
 import Prelude
-import Data.List
+import Data.List.Lazy
 import Data.Tuple
 import Data.Generic
 
@@ -31,11 +31,12 @@ type VexNote = { pitch      :: Pitch
              , octave     :: Int
              }
 
-type VexFlowNote = { note     :: Data.List.Lazy.List VexNote
+type VexFlowNote = { note     :: Array VexNote
                 , duration :: Duration
                 }
               
 type VexPitch = String
+type VexAccidental = String
 
 cis :: Note
 cis = { pitch      : C
@@ -79,10 +80,7 @@ pitchToVexPitch pitch accidental octave = (pitchToString pitch) ++ (accidentalTo
 noteToVexNote :: Note -> Vx.VexNote
 noteToVexNote note = {pitch    : [pitchToVexPitch note.pitch note.accidental note.octave]
                      ,duration : show $ durationToInt note.duration
-                     }
-                     
-accidentalIndex :: Note -> List Int
-accidentalIndex note = toList [durationToInt note.duration]
+                     }                     
                      
 vexCis :: Vx.VexNote
 vexCis = noteToVexNote cis
@@ -94,41 +92,35 @@ cIS = { note     : cISNote
       , duration : Even Whole
       }
               
-cISNote :: Data.List.Lazy.List VexNote
-cISNote = Data.List.Lazy.toList [ { pitch      : C
-                                 , accidental : Sharp
-                                 , octave     : 5}
-                               , { pitch      : E
-                                 , accidental : Natural
-                                 , octave     : 5}
-                               , { pitch      : G
-                                 , accidental : Sharp
-                                 , octave     : 5
-                                 }]
+cISNote :: Array VexNote
+cISNote = [{ pitch      : C
+           , accidental : Sharp
+           , octave     : 5}
+          , { pitch      : E
+            , accidental : Natural
+            , octave     : 5}
+          , { pitch      : G
+            , accidental : Flat
+            , octave     : 5
+            }]
+          
+indexedCis :: Array (Tuple Int Accidental)
+indexedCis = vexnoteToIndexedAccidentals cIS          
 
-extractAccidentals :: VexFlowNote -> Data.List.Lazy.List Accidental
-extractAccidentals vexFlowNote = map (\vexNote -> vexNote.accidental) vexFlowNote.note
+extractAccidentals :: VexFlowNote -> Array Accidental
+extractAccidentals = map _.accidental <<< _.note
 
-addIndexToAccidentals :: Data.List.Lazy.List Accidental -> Data.List.Lazy.List (Tuple Int Accidental)
-addIndexToAccidentals accidentals = Data.List.Lazy.zip (Data.List.Lazy.iterate (+1) 0) accidentals
+addIndexToAccidentals :: Array Accidental -> Array (Tuple Int Accidental)
+addIndexToAccidentals = Data.Array.zip $ Data.List.Lazy.toUnfoldable $ (Data.List.Lazy.iterate (+1) 0)
 
 isNatural :: (Tuple Int Accidental) -> Boolean
-isNatural (Tuple a b) = if b /= Natural then
-                             true
-                           else
-                             false
+isNatural (Tuple a b) = b /= Natural
 
-filterAccidentals :: Data.List.Lazy.List (Tuple Int Accidental) -> Data.List.Lazy.List (Tuple Int Accidental)
-filterAccidentals vexNotesIndex = Data.List.Lazy.filter isNatural vexNotesIndex
+filterAccidentals :: Array (Tuple Int Accidental) -> Array (Tuple Int Accidental)
+filterAccidentals = Data.Array.filter isNatural
 
-
-vexnoteToIndexedAccidentals :: VexFlowNote -> Data.List.Lazy.List (Tuple Int Accidental)
-vexnoteToIndexedAccidentals vexFlowNote = filterAccidentals $ addIndexToAccidentals $ extractAccidentals vexFlowNote
-
-kip :: Data.List.Lazy.List (Tuple Int Accidental)
-kip = vexnoteToIndexedAccidentals cIS
--- vexnoteToIndexedAccidentals2 :: VexFlowNote -> Data.List.Lazy.List (Tuple Int Accidental)
--- vexnoteToIndexedAccidentals2 vexFlowNote = do
---   accidentals <- extractAccidentals vexFlowNote
---   indexedAccidentals <- addIndexToAccidentals accidentals
---   filterAccidentals indexedAccidentals
+vexnoteToIndexedAccidentals :: VexFlowNote -> Array (Tuple Int Accidental)
+vexnoteToIndexedAccidentals vexFlowNote = do
+  let accidentals = extractAccidentals vexFlowNote
+  let indexedAccidentals = addIndexToAccidentals accidentals
+  filterAccidentals indexedAccidentals

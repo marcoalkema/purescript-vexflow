@@ -22,7 +22,7 @@ main = do
   voicing <- Vx.addNotesToVoice notes (Vx.createNewVoice 4.0 4.0)  
   Vx.formatter voicing 500.0
   Vx.drawVoice ctx stave voicing
-  Vx.logger Music.kip
+  Vx.logger Music.indexedCis
   
 voices :: Vx.Bar
 voices = [[{pitch: ["c/4", "f/4", "g/4"], duration: "h"}

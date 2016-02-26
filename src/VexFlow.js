@@ -59,7 +59,7 @@ module.exports = {
 
     logger: function(item) {
 	return function() {
-	    console.log("Logger :" + item);
+	    console.log("Logger :" + JSON.stringify(item));
 	};
     },
     

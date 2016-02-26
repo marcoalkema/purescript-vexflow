@@ -35,7 +35,7 @@ foreign import createStave        :: Number -> Number -> Number -> VexFlowEff
 -- Eff in DOM
 foreign import drawStave          :: VexFlow -> Clef -> VexFlow -> VexFlowEff
 foreign import createKeySignature :: KeySignature -> VexFlow -> VexFlowEff
-foreign import logger             :: forall a. Data.List.Lazy.List (Tuple Int a) -> VexFlowEff
+foreign import logger             :: forall a. Array (Tuple Int a) -> VexFlowEff
 foreign import createNotes        :: Bar -> VexFlowEff
 foreign import createNewVoice     :: Number -> Number -> VexFlowEff
 foreign import addNotesToVoice    :: VexFlow  -> VexFlowEff -> VexFlowEff
