@@ -5,3 +5,4 @@
 /.psci*
 /src/.webpack.js
 /bundle.js
+/bundle2.js
