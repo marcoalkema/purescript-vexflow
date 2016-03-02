@@ -42,8 +42,6 @@ drawVoice context stave = do
   Vx.formatter voicing (260.0)
   Vx.drawVoice context stave voicing
   Vx.drawBeams beamedNotes context
-
-  
     
 vexBar :: Vm.VexFlowBar
 vexBar = [[{pitch: ["c/4", "f/4", "g/4"], duration: "h"}, {pitch: ["b/5"], duration: "h"}]           
