@@ -9,14 +9,15 @@ type VexPitch      = String
 type VexOctave     = Int
 type VexDuration   = Int
 
-type VexFlowPitch    = String
-type VexFlowDuration = String
-type VexFlowVoice    = Array VexFlowNote
-type VexFlowBar      = Array VexFlowVoice
+type VexFlowPitch      = String
+type VexFlowDuration   = String
+type VexFlowAccidental = String
+type VexFlowVoice      = Array VexFlowNote
+type VexFlowBar        = Array VexFlowVoice
 
 type VexNote = { note     :: Array VexTone
-                   , duration :: Duration
-                   }
+               , duration :: Duration
+               }
 
 type VexTone = { pitch      :: Pitch
                , accidental :: Accidental
@@ -56,20 +57,55 @@ durationToInt (Tuplet Five)       = 5
 durationToInt (Tuplet Six)        = 6
 durationToInt (Tuplet Seven)      = 7
 
-noteToVexFlowPitch :: Pitch -> Accidental -> Octave -> VexFlowPitch
-noteToVexFlowPitch pitch accidental octave = (pitchToString pitch) ++ (accidentalToString accidental) ++ "/" ++ show octave
+type VexAccidentalVoice = Array (Tuple Int String)
+type VexAccidentalBar   = Array VexAccidentalVoice
+
+noteToVexNote :: Note -> VexNote
+noteToVexNote note_ = { note : [{ pitch      : note_.pitch
+                                , accidental : note_.accidental
+                                , octave     : note_.octave}]
+                      , duration : note_.duration}
+
+vexNoteToVexFlowPitch :: VexTone -> VexFlowPitch
+vexNoteToVexFlowPitch vexTone = pitchToString vexTone.pitch ++ (accidentalToString vexTone.accidental) ++ "/" ++ show vexTone.octave
 
 noteToVexFlowNote :: Note -> VexFlowNote
-noteToVexFlowNote note = {pitch    : [noteToVexFlowPitch note.pitch note.accidental note.octave]
-                         ,duration : show $ durationToInt note.duration
-                         }                     
+noteToVexFlowNote note = do
+  let vexNote = noteToVexNote note
+  vexNoteToVexFlowNote vexNote
+                                          
+vexFlowCSharp :: VexFlowNote
+vexFlowCSharp = noteToVexFlowNote cSharp
 
-vexFlowCis :: VexFlowNote
-vexFlowCis = noteToVexFlowNote cSharp
+extractAccidentals :: VexNote -> Array Accidental
+extractAccidentals = map _.accidental <<< _.note
+
+-- addIndexToAccidentals :: Array Accidental -> Array (Tuple Int Accidental)
+-- addIndexToAccidentals = Data.Array.zip $ Data.List.Lazy.toUnfoldable $ (Data.List.Lazy.iterate (+1) 0)
+
+isNatural :: (Tuple Int Accidental) -> Boolean
+isNatural (Tuple a b) = b /= Natural
+
+filterAccidentals :: Array (Tuple Int Accidental) -> Array (Tuple Int Accidental)
+filterAccidentals = Data.Array.filter isNatural
+
+accidentalToVexFlowAccidental :: Tuple Int Accidental -> Tuple Int VexFlowAccidental
+accidentalToVexFlowAccidental (Tuple i accidental) = Tuple i (accidentalToString accidental)
+
+-- vexnoteToIndexedAccidentals :: VexNote -> Array (Tuple Int VexFlowAccidental)
+-- vexnoteToIndexedAccidentals vexFlowNote = do
+--   let accidentals = extractAccidentals vexFlowNote
+--   let indexedAccidentals = addIndexToAccidentals accidentals
+--   let filteredAccidentals = filterAccidentals indexedAccidentals
+--   map accidentalToVexFlowAccidental filteredAccidentals
+
+vexNoteToVexFlowNote :: VexNote -> VexFlowNote
+vexNoteToVexFlowNote vexNote = { pitch    : map vexNoteToVexFlowPitch vexNote.note
+                               , duration : show $ durationToInt vexNote.duration}
 
 cIS :: VexNote
 cIS = { note     : cISNote
-      , duration : Even Whole
+      , duration : Even Half
       }
               
 cISNote :: Array VexTone
@@ -83,25 +119,27 @@ cISNote = [{ pitch      : C
             , accidental : Flat
             , octave     : 5
             }]
-          
-indexedCis :: Array (Tuple Int Accidental)
-indexedCis = vexnoteToIndexedAccidentals cIS
 
-extractAccidentals :: VexNote -> Array Accidental
-extractAccidentals = map _.accidental <<< _.note
+aIS :: VexNote
+aIS = { note : aISNote
+      , duration : Even Half
+      }
 
-addIndexToAccidentals :: Array Accidental -> Array (Tuple Int Accidental)
-addIndexToAccidentals = Data.Array.zip $ Data.List.Lazy.toUnfoldable $ (Data.List.Lazy.iterate (+1) 0)
+aISNote :: Array VexTone
+aISNote = [{ pitch      : A
+           , accidental : Sharp
+           , octave     : 5}
+          , { pitch      : C
+            , accidental : Sharp
+            , octave     : 5}
+          , { pitch      : E
+            , accidental : Sharp
+            , octave     : 5
+            }]
 
-isNatural :: (Tuple Int Accidental) -> Boolean
-isNatural (Tuple a b) = b /= Natural
+kip :: VexFlowNote
+kip = vexNoteToVexFlowNote cIS
 
-filterAccidentals :: Array (Tuple Int Accidental) -> Array (Tuple Int Accidental)
-filterAccidentals = Data.Array.filter isNatural
-
-vexnoteToIndexedAccidentals :: VexNote -> Array (Tuple Int Accidental)
-vexnoteToIndexedAccidentals vexFlowNote = do
-  let accidentals = extractAccidentals vexFlowNote
-  let indexedAccidentals = addIndexToAccidentals accidentals
-  filterAccidentals indexedAccidentals
+testBar :: VexFlowVoice
+testBar = map vexNoteToVexFlowNote [cIS, aIS]
 

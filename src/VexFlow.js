@@ -1,3 +1,4 @@
+
 // module VexFlow
 
 module.exports = {
@@ -36,7 +37,7 @@ module.exports = {
     	};
     }),
 
-    drawStave: function(stave) {
+    drawKeyStave: function(stave) {
     	return function(clef) {
     	    return function(ctx) {
     		return function() {
@@ -49,6 +50,16 @@ module.exports = {
     	};
     },
 
+    drawStave: function(stave) {
+    	    return function(ctx) {
+    		return function() {
+    		    console.log(stave);
+    		    console.log(ctx);
+    		    stave.setContext(ctx).draw();
+    		};
+    	    };
+    },
+
     createKeySignature: function(key) {
 	return function (stave) {
 	    return function() {
@@ -59,21 +70,37 @@ module.exports = {
 
     logger: function(item) {
 	return function() {
-	    console.log("Logger :" + JSON.stringify(item));
+	    console.log("Logger :" + (item));
 	};
     },
     
     createNotes: function(voices) {
     	    return function() {
     		return voices.map(function(voice){
-    		    console.log("createNotes " + (JSON.stringify(voice)));
     		    return voice.map(function(note){
-    			return (new Vex.Flow.StaveNote({ keys: note.pitch, duration: note.duration}));	
+    			return (new Vex.Flow.StaveNote({ keys: note.pitch, duration: note.duration}));
+			
     		    });
     		});
     	    };
     },
-			 
+
+    addAccidentals: function(voices) {
+	console.log(voices);
+    	return function(indexList) {
+    	    return function() {
+		 return indexList.map(function(e, i) {
+		    return indexList[i].map(function(f, j) {;
+    			function addAccidental (prev, curr){
+    			    return prev.addAccidental(curr.value0, new Vex.Flow.Accidental(curr.value1));
+			};
+			return indexList[i][j].reduce(addAccidental, voices[i][j]);
+		    });
+		 });
+    	    };	
+	};
+    },
+    
     createNewVoice: function(numBeats) {
     	return function(beatValue) {
     	    return function() {
@@ -87,13 +114,38 @@ module.exports = {
     	};
     },
 
+    addBeams: function(voices){
+	console.log("Add beams");
+	console.log(voices);
+	return function(){
+	    return voices.map(function(voice){
+		return new Vex.Flow.Beam(voice);
+	    	});
+	};
+    },
+
+    addTies: function(voices){
+	console.log("Add ties");
+	console.log(voices);
+	return function(){
+	    return voices.map(function(voice, i){
+		return new Vex.Flow.StaveTie({
+		    first_note: voice[i],
+		    last_note: voice[i+1],
+		    first_indices: [0],
+		    last_indices: [0]
+		});
+		
+	    });
+	};
+    },    
+    
     addNotesToVoice: function(notes) {
     	return function(voice) {
     		return function() {
-    		    console.log(voice);
-    		    console.log(notes);
+    		    console.log(("Voice : " + voice));
+    		    console.log((notes));
     		    return notes.map(function(note) {
-    			// console.log (JSON.stringify(note, null, 4));
     			return voice().addTickables(note);
     		    });
     		};
@@ -104,8 +156,8 @@ module.exports = {
     formatter: function(voices) {
     	return function(pxRes) {
     	    return function() {
-    		console.log("Formatter :" + voices + " - " + "Pixel resolution : " + pxRes);
-    		// console.log(JSON.stringify(voices));
+		console.log("Formatter: ");
+		console.log(voices);
     		var formatter = new Vex.Flow.Formatter().joinVoices(voices).format(voices, pxRes);
     		return formatter;
     	    };
@@ -113,8 +165,10 @@ module.exports = {
     },
 	
     drawVoice: function(ctx) {
+	console.log("Drawing voice.");
     	return function(stave) {
     	    return function(voices) {
+		console.log(voices);
     		return function() {
     		    voices.map(function(voice) {
     			console.log(voice);
@@ -123,5 +177,18 @@ module.exports = {
     		};
     	    };
     	};
+    },
+
+    drawBeams: function(beams) {
+	console.log(beams);
+	return function(ctx){
+	    return function(){
+		beams.map(function(beam){
+		    beam.setContext(ctx).draw();
+		});
+	    };
+	};
     }
 };
+
+

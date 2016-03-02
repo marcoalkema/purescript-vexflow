@@ -26,7 +26,7 @@ drawKeySignatureStave renderer clef key = do
     Vx.createKeySignature key stave
     Vx.drawKeyStave stave clef ctx
 
-drawStave :: Vx.VexFlow -> Number -> Number -> Number -> (Vx.VexFlow -> Vx.VexFlow -> Vx.VexFlowEff) -> Vx.VexFlowEff
+drawStave :: Vx.VexFlow -> Number -> Number -> Number -> (Vx.VexFlow -> Vx.VexFlow -> xVx.VexFlowEff) -> Vx.VexFlowEff
 drawStave renderer x y w voice = do
   ctx <- Vx.createCtx renderer
   stave <- Vx.createStave x y w
