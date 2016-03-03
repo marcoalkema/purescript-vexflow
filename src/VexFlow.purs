@@ -22,6 +22,7 @@ foreign import createStave        :: Number -> Number -> Number -> VexFlowEff
 foreign import drawStave          :: VexFlow -> VexFlow -> VexFlowEff
 foreign import drawKeyStave       :: VexFlow -> Clef -> VexFlow -> VexFlowEff
 foreign import createKeySignature :: KeySignature -> VexFlow -> VexFlowEff
+foreign import createTimeSignature :: TimeSignature -> VexFlow -> VexFlowEff
 foreign import createNotes        :: VexFlowBar -> VexFlowEff
 foreign import addAccidentals     :: VexFlow -> Array (Array (Array (Tuple Int String))) -> VexFlowEff
 foreign import addBeams           :: VexFlow -> VexFlowEff

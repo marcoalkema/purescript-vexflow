@@ -14,6 +14,7 @@ type VexFlowDuration   = String
 type VexFlowAccidental = String
 type VexFlowVoice      = Array VexFlowNote
 type VexFlowBar        = Array VexFlowVoice
+type VexFlowMusic      = Array VexFlowBar
 
 type VexNote = { note     :: Array VexTone
                , duration :: Duration

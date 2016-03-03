@@ -12,6 +12,7 @@ data Irregular  = Three | Five | Six | Seven
 
 type Clef = String
 type KeySignature = String
+type TimeSignature = String
 
 
 type Note = { pitch      :: Pitch

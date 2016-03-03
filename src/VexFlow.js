@@ -10,8 +10,7 @@ module.exports = {
     }),
 
     createRenderer: (function(canvas) {
-    	return function() {
-    	    console.log(canvas);
+    	return function() {;
     	    var renderer = new Vex.Flow.Renderer(canvas, Vex.Flow.Renderer.Backends.CANVAS);
     	    return renderer;
     	};
@@ -19,7 +18,6 @@ module.exports = {
 
     createCtx: (function(renderer) {
     	return function() {
-    	    console.log ("Creating context for: " + renderer);
     	    return renderer.getContext();
     	};
     }),
@@ -28,7 +26,6 @@ module.exports = {
     	return function(y) {
     	    return function(width) {
     		return function() {
-    		    console.log ("createStave");
     		    var stave = new Vex.Flow.Stave(x, y, width);
     		    return stave;
     		};
@@ -41,9 +38,6 @@ module.exports = {
     	return function(clef) {
     	    return function(ctx) {
     		return function() {
-    		    console.log(stave);
-    		    console.log(clef);
-    		    console.log(ctx);
     		    stave.addClef(clef).setContext(ctx).draw();
     		};
     	    };
@@ -53,9 +47,7 @@ module.exports = {
     drawStave: function(stave) {
     	    return function(ctx) {
     		return function() {
-    		    console.log(stave);
-    		    console.log(ctx);
-    		    stave.setContext(ctx).draw();
+		    stave.setContext(ctx).draw();
     		};
     	    };
     },
@@ -64,6 +56,15 @@ module.exports = {
 	return function (stave) {
 	    return function() {
 		return ((new Vex.Flow.KeySignature(key)).addToStave(stave));
+	    };
+	};
+    },
+
+    createTimeSignature: function(meter) {
+	return function (stave) {
+	    console.log(stave);
+	    return function() {
+		return stave.addTimeSignature(meter);
 	    };
 	};
     },
@@ -152,14 +153,12 @@ module.exports = {
     	};
     },
 
-    // Format and justify the notes to 500 pixels
     formatter: function(voices) {
     	return function(pxRes) {
     	    return function() {
 		console.log("Formatter: ");
 		console.log(voices);
-    		var formatter = new Vex.Flow.Formatter().joinVoices(voices).format(voices, pxRes);
-    		return formatter;
+    		return new Vex.Flow.Formatter().joinVoices(voices).format(voices, pxRes);
     	    };
     	};
     },
