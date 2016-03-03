@@ -71,7 +71,7 @@ module.exports = {
 
     logger: function(item) {
 	return function() {
-	    console.log("Logger :" + (item));
+	    console.log(item);
 	};
     },
     
@@ -93,7 +93,7 @@ module.exports = {
 		 return indexList.map(function(e, i) {
 		    return indexList[i].map(function(f, j) {;
     			function addAccidental (prev, curr){
-    			    return prev.addAccidental(curr.value0, new Vex.Flow.Accidental(curr.value1));
+    			    return prev.addAccidental(curr.value1, new Vex.Flow.Accidental(curr.value0));
 			};
 			return indexList[i][j].reduce(addAccidental, voices[i][j]);
 		    });

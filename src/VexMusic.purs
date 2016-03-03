@@ -15,6 +15,9 @@ type VexFlowAccidental = String
 type VexFlowVoice      = Array VexFlowNote
 type VexFlowBar        = Array VexFlowVoice
 type VexFlowMusic      = Array VexFlowBar
+type VexFlowPiano      = { treble :: Array VexFlowBar
+                         , bass   :: Array VexFlowBar
+                         }
 
 type VexNote = { note     :: Array VexTone
                , duration :: Duration
@@ -28,6 +31,10 @@ type VexTone = { pitch      :: Pitch
 type VexFlowNote = { pitch     :: Array VexFlowPitch
                    , duration  :: VexFlowDuration
                    }
+
+type VexVoice = Array VexNote
+type VexBar = Array VexVoice
+type VexMusic = Array VexBar
 
 pitchToString :: Pitch -> VexPitch
 pitchToString C = "c"
@@ -74,41 +81,64 @@ noteToVexFlowNote :: Note -> VexFlowNote
 noteToVexFlowNote note = do
   let vexNote = noteToVexNote note
   vexNoteToVexFlowNote vexNote
-                                          
+
+vexNoteToVexFlowNote :: VexNote -> VexFlowNote
+vexNoteToVexFlowNote vexNote = { pitch    : map vexNoteToVexFlowPitch vexNote.note
+                               , duration : show $ durationToInt vexNote.duration}
+
+vexNoteToVexFlowVoice :: VexVoice -> VexFlowVoice
+vexNoteToVexFlowVoice vexVoice = map vexNoteToVexFlowNote vexVoice
+
+vexNoteToVexFlowBar :: VexBar -> VexFlowBar
+vexNoteToVexFlowBar vexBar = map vexNoteToVexFlowVoice vexBar
+
 vexFlowCSharp :: VexFlowNote
 vexFlowCSharp = noteToVexFlowNote cSharp
 
 extractAccidentals :: VexNote -> Array Accidental
 extractAccidentals = map _.accidental <<< _.note
 
--- addIndexToAccidentals :: Array Accidental -> Array (Tuple Int Accidental)
--- addIndexToAccidentals = Data.Array.zip $ Data.List.Lazy.toUnfoldable $ (Data.List.Lazy.iterate (+1) 0)
+addIndexToAccidentals :: Array Accidental -> Array (Tuple Accidental Int)
+addIndexToAccidentals arr = Data.List.Lazy.toUnfoldable $ (Data.List.Lazy.zip (Data.List.Lazy.fromFoldable arr) (Data.List.Lazy.iterate (+1) 0))
 
-isNatural :: (Tuple Int Accidental) -> Boolean
-isNatural (Tuple a b) = b /= Natural
+isNatural :: (Tuple Accidental Int) -> Boolean
+isNatural (Tuple a b) = a /= Natural
 
-filterAccidentals :: Array (Tuple Int Accidental) -> Array (Tuple Int Accidental)
+-- isNatural2 :: Array (Tuple Accidental Int) -> Array (Tuple Accidental Int)
+-- isNatural2 
+
+-- removeElement :: 
+
+-- accidentalList :: Array (Tuple Accidental Int) -> Array (Tuple Accidental Int)
+-- accidentalList 
+
+filterAccidentals :: Array (Tuple Accidental Int) -> Array (Tuple Accidental Int)
 filterAccidentals = Data.Array.filter isNatural
 
-accidentalToVexFlowAccidental :: Tuple Int Accidental -> Tuple Int VexFlowAccidental
-accidentalToVexFlowAccidental (Tuple i accidental) = Tuple i (accidentalToString accidental)
+accidentalToVexFlowAccidental :: Tuple Accidental Int -> Tuple VexFlowAccidental Int
+accidentalToVexFlowAccidental (Tuple accidental i) = Tuple (accidentalToString accidental) i
 
--- vexnoteToIndexedAccidentals :: VexNote -> Array (Tuple Int VexFlowAccidental)
--- vexnoteToIndexedAccidentals vexFlowNote = do
---   let accidentals = extractAccidentals vexFlowNote
---   let indexedAccidentals = addIndexToAccidentals accidentals
---   let filteredAccidentals = filterAccidentals indexedAccidentals
---   map accidentalToVexFlowAccidental filteredAccidentals
+vexnoteToIndexedAccidentals :: VexNote -> Array (Tuple VexFlowAccidental Int)
+vexnoteToIndexedAccidentals vexFlowNote = do
+  let accidentals = extractAccidentals vexFlowNote
+  let indexedAccidentals = addIndexToAccidentals accidentals
+  let filteredAccidentals = filterAccidentals indexedAccidentals
+  map accidentalToVexFlowAccidental filteredAccidentals
 
-vexNoteToVexFlowNote :: VexNote -> VexFlowNote
-vexNoteToVexFlowNote vexNote = { pitch    : map vexNoteToVexFlowPitch vexNote.note
-                               , duration : show $ durationToInt vexNote.duration}
+vexVoiceToIndexedAccidentals :: VexVoice -> Array (Array (Tuple VexFlowAccidental Int))
+vexVoiceToIndexedAccidentals voice = map vexnoteToIndexedAccidentals voice
+
+vexBarToIndexedAccidentals :: VexBar -> Array (Array (Array (Tuple VexFlowAccidental Int)))
+vexBarToIndexedAccidentals bar = map vexVoiceToIndexedAccidentals bar
 
 cIS :: VexNote
 cIS = { note     : cISNote
       , duration : Even Half
       }
-              
+
+indexCIS :: Array (Tuple VexFlowAccidental Int)
+indexCIS = vexnoteToIndexedAccidentals cIS
+      
 cISNote :: Array VexTone
 cISNote = [{ pitch      : C
            , accidental : Sharp
@@ -144,3 +174,40 @@ kip = vexNoteToVexFlowNote cIS
 testBar :: VexFlowVoice
 testBar = map vexNoteToVexFlowNote [cIS, aIS]
 
+eighth :: VexNote
+eighth = { note : [{ pitch : A
+                   , accidental : Sharp
+                   , octave : 4}
+                  , { pitch : C
+                    , accidental : Sharp
+                    , octave : 4}
+                  , { pitch : E
+                    , accidental : Natural
+                    , octave : 4}
+                  ]
+         , duration : Even Eighth}
+
+eighths :: VexVoice
+eighths = [eighth, eighth, eighth, eighth, eighth, eighth, eighth, eighth]
+         
+eighthsBar :: VexBar
+eighthsBar = [[eighth, eighth, eighth, eighth, eighth, eighth, eighth, eighth]]
+
+eighthsMusic :: VexMusic
+eighthsMusic = [ [[eighth, eighth, eighth, eighth, eighth, eighth, eighth, eighth]]
+               , [[eighth, eighth, eighth, eighth, eighth, eighth, eighth, eighth]]
+               , [[eighth, eighth, eighth, eighth, eighth, eighth, eighth, eighth]]
+               , [[eighth, eighth, eighth, eighth, eighth, eighth, eighth, eighth]]
+               , [[eighth, eighth, eighth, eighth, eighth, eighth, eighth, eighth]]
+               , [[eighth, eighth, eighth, eighth, eighth, eighth, eighth, eighth]]
+               , [[eighth, eighth, eighth, eighth, eighth, eighth, eighth, eighth]]
+               , [[eighth, eighth, eighth, eighth, eighth, eighth, eighth, eighth]]
+               , [[eighth, eighth, eighth, eighth, eighth, eighth, eighth, eighth]]
+               ]
+aapTuple :: VexMusic -> Array (Array (Array (Array (Tuple VexFlowAccidental Int))))
+aapTuple vex = map vexBarToIndexedAccidentals vex
+
+aapMuzak :: VexMusic -> VexFlowMusic
+aapMuzak muzakje = map vexNoteToVexFlowBar muzakje
+  
+  
