@@ -24,8 +24,8 @@ drawNotation :: Vm.VexFlowMusic -> Array AccidentalBar -> Vx.VexFlow -> Vx.VexFl
 drawNotation music accidentals renderer = do
   let stave = drawStave renderer 1.0 1.0 1.0
   let voices = (Data.Array.zipWith drawVoice music accidentals)
-  -- map ($ stave) voices
-  Vx.logger music
+  map (\voice -> stave voice) voices
+  -- Vx.logger voices 
 
 drawVoice :: Vm.VexFlowBar -> AccidentalBar -> Vx.VexFlow -> Vx.VexFlow -> Vx.VexFlowEff
 drawVoice bar accidentals context stave = do
