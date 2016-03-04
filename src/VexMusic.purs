@@ -124,15 +124,15 @@ vexBarToIndexedAccidentals :: VexBar -> Array (Array (Array (Tuple VexFlowAccide
 vexBarToIndexedAccidentals = map vexVoiceToIndexedAccidentals
 
 eighth :: VexNote
-eighth = { note : [{ pitch : A
-                   , accidental : Sharp
-                   , octave : 4}
-                  , { pitch : C
-                    , accidental : Sharp
+eighth = { note : [ { pitch : A
+                    , accidental : Flat
                     , octave : 4}
+                  , { pitch : C
+                    , accidental : Natural
+                    , octave : 5}
                   , { pitch : E
                     , accidental : Natural
-                    , octave : 4}
+                    , octave : 5}
                   ]
          , duration : Even Eighth}
 

@@ -6,8 +6,7 @@ import Prelude
 import Data.Tuple
 import VexFlow as Vx
 import VexMusic as Vm
--- import Music
-
+import Music
 
 type AccidentalBar = (Array (Array (Array (Tuple String Int))))
 
@@ -15,6 +14,7 @@ main :: Vx.DomEff
 main = do
   canvas <- Vx.createCanvas "notationCanvas"
   renderer <- Vx.createRenderer canvas
+  drawPrimaryStave renderer "treble" "G"
   drawNotation (Vm.testMusic Vm.eighthsMusic) (Vm.musicWithIndexedAccidentals Vm.eighthsMusic) renderer
 
 drawNotation :: Vm.VexFlowMusic -> Array AccidentalBar -> Vx.VexFlow -> Vx.DomEff
@@ -37,17 +37,17 @@ drawVoice bar accidentals context stave = do
 drawStave :: Vx.VexFlow -> Number -> Number -> Int -> (Vx.VexFlow -> Vx.VexFlow -> Vx.VexFlowEff) -> Vx.VexFlowEff
 drawStave renderer w y x voice = do
   ctx <- Vx.createCtx renderer
-  stave <- Vx.createStave (x * 280) y w
+  stave <- Vx.createStave (80 + x * 280) y w
   Vx.drawStave stave ctx
   voice ctx stave
 
--- drawPrimaryStave :: Vx.VexFlow -> Clef -> KeySignature -> Vx.VexFlowEff
--- drawPrimaryStave renderer clef key = do
---     ctx <- Vx.createCtx renderer
---     stave <- Vx.createStave 1.0 1.0 80.0
---     Vx.createKeySignature key stave
---     Vx.createTimeSignature "4/4" stave
---     Vx.drawKeyStave stave clef ctx
+drawPrimaryStave :: Vx.VexFlow -> Clef -> KeySignature -> Vx.VexFlowEff
+drawPrimaryStave renderer clef key = do
+    ctx <- Vx.createCtx renderer
+    stave <- Vx.createStave 1 1.0 80.0
+    Vx.createKeySignature key stave
+    Vx.createTimeSignature "4/4" stave
+    Vx.drawKeyStave stave clef ctx
 
 -- drawTrebleStave :: Number -> Vx.VexFlow -> KeySignature -> Vx.VexFlowEff
 -- drawTrebleStave y renderer key = do
