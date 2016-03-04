@@ -6,13 +6,14 @@ import Music
 import VexMusic
 import Data.Tuple
 
-
 foreign import data VEXFLOW       :: !
 foreign import data Canvas        :: *
-foreign import data VexFlow       :: *                    
+foreign import data VexFlow       :: *
+foreign import data Dom           :: *                    
 foreign import data DOM           :: !
 type CanvasEff  = Eff (dom :: DOM) Canvas
 type VexFlowEff = Eff (dom :: DOM) VexFlow
+type DomEff     = Eff (dom :: DOM) Dom
 
 foreign import createCanvas       :: String -> CanvasEff
 foreign import createRenderer     :: Canvas -> VexFlowEff
@@ -33,4 +34,4 @@ foreign import drawVoice          :: VexFlow -> VexFlow -> VexFlow ->VexFlowEff
 foreign import drawBeams          :: VexFlow -> VexFlow -> VexFlowEff
 foreign import drawTies           :: VexFlow -> VexFlowEff
 
-foreign import logger             :: forall a. a -> VexFlowEff
+foreign import logger             :: forall a. a -> DomEff

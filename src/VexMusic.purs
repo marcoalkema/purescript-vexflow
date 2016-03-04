@@ -87,10 +87,10 @@ vexNoteToVexFlowNote vexNote = { pitch    : map vexNoteToVexFlowPitch vexNote.no
                                , duration : show $ durationToInt vexNote.duration}
 
 vexNoteToVexFlowVoice :: VexVoice -> VexFlowVoice
-vexNoteToVexFlowVoice vexVoice = map vexNoteToVexFlowNote vexVoice
+vexNoteToVexFlowVoice = map vexNoteToVexFlowNote
 
 vexNoteToVexFlowBar :: VexBar -> VexFlowBar
-vexNoteToVexFlowBar vexBar = map vexNoteToVexFlowVoice vexBar
+vexNoteToVexFlowBar = map vexNoteToVexFlowVoice
 
 vexFlowCSharp :: VexFlowNote
 vexFlowCSharp = noteToVexFlowNote cSharp
@@ -103,14 +103,6 @@ addIndexToAccidentals arr = Data.List.Lazy.toUnfoldable $ (Data.List.Lazy.zip (D
 
 isNatural :: (Tuple Accidental Int) -> Boolean
 isNatural (Tuple a b) = a /= Natural
-
--- isNatural2 :: Array (Tuple Accidental Int) -> Array (Tuple Accidental Int)
--- isNatural2 
-
--- removeElement :: 
-
--- accidentalList :: Array (Tuple Accidental Int) -> Array (Tuple Accidental Int)
--- accidentalList 
 
 filterAccidentals :: Array (Tuple Accidental Int) -> Array (Tuple Accidental Int)
 filterAccidentals = Data.Array.filter isNatural
@@ -126,53 +118,10 @@ vexnoteToIndexedAccidentals vexFlowNote = do
   map accidentalToVexFlowAccidental filteredAccidentals
 
 vexVoiceToIndexedAccidentals :: VexVoice -> Array (Array (Tuple VexFlowAccidental Int))
-vexVoiceToIndexedAccidentals voice = map vexnoteToIndexedAccidentals voice
+vexVoiceToIndexedAccidentals = map vexnoteToIndexedAccidentals
 
 vexBarToIndexedAccidentals :: VexBar -> Array (Array (Array (Tuple VexFlowAccidental Int)))
-vexBarToIndexedAccidentals bar = map vexVoiceToIndexedAccidentals bar
-
-cIS :: VexNote
-cIS = { note     : cISNote
-      , duration : Even Half
-      }
-
-indexCIS :: Array (Tuple VexFlowAccidental Int)
-indexCIS = vexnoteToIndexedAccidentals cIS
-      
-cISNote :: Array VexTone
-cISNote = [{ pitch      : C
-           , accidental : Sharp
-           , octave     : 5}
-          , { pitch      : E
-            , accidental : Natural
-            , octave     : 5}
-          , { pitch      : G
-            , accidental : Flat
-            , octave     : 5
-            }]
-
-aIS :: VexNote
-aIS = { note : aISNote
-      , duration : Even Half
-      }
-
-aISNote :: Array VexTone
-aISNote = [{ pitch      : A
-           , accidental : Sharp
-           , octave     : 5}
-          , { pitch      : C
-            , accidental : Sharp
-            , octave     : 5}
-          , { pitch      : E
-            , accidental : Sharp
-            , octave     : 5
-            }]
-
-kip :: VexFlowNote
-kip = vexNoteToVexFlowNote cIS
-
-testBar :: VexFlowVoice
-testBar = map vexNoteToVexFlowNote [cIS, aIS]
+vexBarToIndexedAccidentals = map vexVoiceToIndexedAccidentals
 
 eighth :: VexNote
 eighth = { note : [{ pitch : A
@@ -187,12 +136,6 @@ eighth = { note : [{ pitch : A
                   ]
          , duration : Even Eighth}
 
-eighths :: VexVoice
-eighths = [eighth, eighth, eighth, eighth, eighth, eighth, eighth, eighth]
-         
-eighthsBar :: VexBar
-eighthsBar = [[eighth, eighth, eighth, eighth, eighth, eighth, eighth, eighth]]
-
 eighthsMusic :: VexMusic
 eighthsMusic = [ [[eighth, eighth, eighth, eighth, eighth, eighth, eighth, eighth]]
                , [[eighth, eighth, eighth, eighth, eighth, eighth, eighth, eighth]]
@@ -204,10 +147,10 @@ eighthsMusic = [ [[eighth, eighth, eighth, eighth, eighth, eighth, eighth, eight
                , [[eighth, eighth, eighth, eighth, eighth, eighth, eighth, eighth]]
                , [[eighth, eighth, eighth, eighth, eighth, eighth, eighth, eighth]]
                ]
-aapTuple :: VexMusic -> Array (Array (Array (Array (Tuple VexFlowAccidental Int))))
-aapTuple vex = map vexBarToIndexedAccidentals vex
+musicWithIndexedAccidentals :: VexMusic -> Array (Array (Array (Array (Tuple VexFlowAccidental Int))))
+musicWithIndexedAccidentals = map vexBarToIndexedAccidentals
 
-aapMuzak :: VexMusic -> VexFlowMusic
-aapMuzak muzakje = map vexNoteToVexFlowBar muzakje
+testMusic :: VexMusic -> VexFlowMusic
+testMusic = map vexNoteToVexFlowBar
   
   
