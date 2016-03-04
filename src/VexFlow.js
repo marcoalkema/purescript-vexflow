@@ -62,7 +62,6 @@ module.exports = {
 
     createTimeSignature: function(meter) {
 	return function (stave) {
-	    console.log(stave);
 	    return function() {
 		return stave.addTimeSignature(meter);
 	    };
@@ -87,7 +86,6 @@ module.exports = {
     },
 
     addAccidentals: function(voices) {
-	console.log(voices);
     	return function(indexList) {
     	    return function() {
 		 return indexList.map(function(e, i) {
@@ -105,7 +103,6 @@ module.exports = {
     createNewVoice: function(numBeats) {
     	return function(beatValue) {
     	    return function() {
-    		console.log("CreateNewVoice in: " + numBeats + " : " + beatValue);
     		return (new Vex.Flow.Voice({
     		    num_beats: numBeats,
     		    beat_value: beatValue,
@@ -116,8 +113,6 @@ module.exports = {
     },
 
     addBeams: function(voices){
-	console.log("Add beams");
-	console.log(voices);
 	return function(){
 	    return voices.map(function(voice){
 		return new Vex.Flow.Beam(voice);
@@ -126,8 +121,6 @@ module.exports = {
     },
 
     addTies: function(voices){
-	console.log("Add ties");
-	console.log(voices);
 	return function(){
 	    return voices.map(function(voice, i){
 		return new Vex.Flow.StaveTie({
@@ -144,8 +137,6 @@ module.exports = {
     addNotesToVoice: function(notes) {
     	return function(voice) {
     		return function() {
-    		    console.log(("Voice : " + voice));
-    		    console.log((notes));
     		    return notes.map(function(note) {
     			return voice().addTickables(note);
     		    });
@@ -156,21 +147,16 @@ module.exports = {
     formatter: function(voices) {
     	return function(pxRes) {
     	    return function() {
-		console.log("Formatter: ");
-		console.log(voices);
     		return new Vex.Flow.Formatter().joinVoices(voices).format(voices, pxRes);
     	    };
     	};
     },
 	
     drawVoice: function(ctx) {
-	console.log("Drawing voice.");
     	return function(stave) {
     	    return function(voices) {
-		console.log(voices);
     		return function() {
     		    voices.map(function(voice) {
-    			console.log(voice);
     			return voice.draw(ctx,stave);
     			});
     		};
@@ -179,7 +165,6 @@ module.exports = {
     },
 
     drawBeams: function(beams) {
-	console.log(beams);
 	return function(ctx){
 	    return function(){
 		beams.map(function(beam){
