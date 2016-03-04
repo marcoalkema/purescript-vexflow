@@ -4,7 +4,7 @@ import Prelude
 -- import Control.Apply
 -- import Control.Monad.Eff
 -- import Control.Monad.Eff.Console
--- import Data.Foldable
+
 import Data.Tuple
 import VexFlow as Vx
 import VexMusic as Vm
@@ -22,10 +22,10 @@ main = do
 
 drawNotation :: Vm.VexFlowMusic -> Array AccidentalBar -> Vx.VexFlow -> Vx.VexFlowEff
 drawNotation music accidentals renderer = do
-  let stave = drawStave renderer 1.0 1.0 1.0
+  let stave = drawStave renderer 1.0 1.0 280.0
   let voices = (Data.Array.zipWith drawVoice music accidentals)
-  map (\voice -> stave voice) voices
-  -- Vx.logger voices 
+  Data.Foldable.traverse_ stave voices
+  Vx.logger voices 
 
 drawVoice :: Vm.VexFlowBar -> AccidentalBar -> Vx.VexFlow -> Vx.VexFlow -> Vx.VexFlowEff
 drawVoice bar accidentals context stave = do
