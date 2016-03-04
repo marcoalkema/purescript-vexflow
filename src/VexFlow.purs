@@ -18,7 +18,7 @@ type DomEff     = Eff (dom :: DOM) Dom
 foreign import createCanvas       :: String -> CanvasEff
 foreign import createRenderer     :: Canvas -> VexFlowEff
 foreign import createCtx          :: VexFlow -> VexFlowEff
-foreign import createStave        :: Number -> Number -> Number -> VexFlowEff
+foreign import createStave        :: Int -> Number -> Number -> VexFlowEff
 -- Eff in DOM
 foreign import drawStave          :: VexFlow -> VexFlow -> VexFlowEff
 foreign import drawKeyStave       :: VexFlow -> Clef -> VexFlow -> VexFlowEff
