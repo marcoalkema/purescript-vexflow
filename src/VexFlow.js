@@ -3,9 +3,7 @@
 
 module.exports = {
 
-    clef: function() {
-	    return "treble";
-    },
+    clef:  "treble",
 
     createCanvas: (function(div) {
     	return function(){

@@ -1,12 +1,14 @@
 module Main where
 
 import Prelude
--- import Control.Monad.Eff
+import Control.Monad.Eff
 -- import Control.Monad.Eff.Console
+-- import MidiPlayer
+-- import MidiJsTypes
 import Data.Tuple
 import VexFlow as Vx
 import VexMusic as Vm
-import Music
+import Music                  
 
 type AccidentalBar = (Array (Array (Array (Tuple String Int))))
 
@@ -16,6 +18,11 @@ main = do
   renderer <- Vx.createRenderer canvas
   drawPrimaryStave renderer Vx.clef "B"
   drawNotation (Vm.testMusic Vm.eighthsMusic) (Vm.musicWithIndexedAccidentals Vm.eighthsMusic) renderer
+
+loadFile' :: forall e. Eff (midi :: MidiPlayer.MIDI) Unit
+loadFile' = do
+  MidiPlayer.loadFile "bower_components/purescript-midiplayer/midi/1bar8s.mid"
+  MidiPlayer.getData
 
 drawNotation :: Vm.VexFlowMusic -> Array AccidentalBar -> Vx.VexFlow -> Vx.DomEff
 drawNotation music accidentals renderer = do
