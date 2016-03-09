@@ -3,6 +3,10 @@
 
 module.exports = {
 
+    clef: function() {
+	    return "treble";
+    },
+
     createCanvas: (function(div) {
     	return function(){
     	    return document.getElementById(div);

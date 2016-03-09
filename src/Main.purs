@@ -14,7 +14,7 @@ main :: Vx.DomEff
 main = do
   canvas <- Vx.createCanvas "notationCanvas"
   renderer <- Vx.createRenderer canvas
-  drawPrimaryStave renderer "treble" "G"
+  drawPrimaryStave renderer Vx.clef "B"
   drawNotation (Vm.testMusic Vm.eighthsMusic) (Vm.musicWithIndexedAccidentals Vm.eighthsMusic) renderer
 
 drawNotation :: Vm.VexFlowMusic -> Array AccidentalBar -> Vx.VexFlow -> Vx.DomEff

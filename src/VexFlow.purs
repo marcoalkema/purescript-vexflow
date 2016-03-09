@@ -15,6 +15,7 @@ type CanvasEff  = Eff (dom :: DOM) Canvas
 type VexFlowEff = Eff (dom :: DOM) VexFlow
 type DomEff     = Eff (dom :: DOM) Dom
 
+foreign import clef               :: String
 foreign import createCanvas       :: String -> CanvasEff
 foreign import createRenderer     :: Canvas -> VexFlowEff
 foreign import createCtx          :: VexFlow -> VexFlowEff
