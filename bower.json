@@ -21,6 +21,6 @@
     "purescript-foldable-traversable": "^0.4.2",
     "purescript-math": "^0.2.0",
     "purescript-foreign": "^0.7.2",
-    "purescript-midiplayer": "https://github.com/marcoalkema/purescript-midiplayer.git#deb518ccc3d0cc4357071146fc3d3a9348a68ffe"
+    "purescript-midiplayer": "https://github.com/marcoalkema/purescript-midiplayer.git#77e3b84a63541da6c221717bd1fd65633d18534b"
   }
 }

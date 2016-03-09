@@ -2,9 +2,6 @@ module Main where
 
 import Prelude
 import Control.Monad.Eff
--- import Control.Monad.Eff.Console
--- import MidiPlayer
--- import MidiJsTypes
 import Data.Tuple
 import VexFlow as Vx
 import VexMusic as Vm
