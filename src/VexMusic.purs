@@ -12,12 +12,16 @@ type VexDuration   = Int
 type VexFlowPitch      = String
 type VexFlowDuration   = String
 type VexFlowAccidental = String
+type VexFlowOctave     = String
 type VexFlowVoice      = Array VexFlowNote
 type VexFlowBar        = Array VexFlowVoice
 type VexFlowMusic      = Array VexFlowBar
 type VexFlowPiano      = { treble :: Array VexFlowBar
-                         , bass   :: Array VexFlowBar
-                         }
+                         , bass   :: Array VexFlowBar}
+
+type VexAccidentalVoice = Array (Tuple Int String)
+type VexAccidentalBar   = Array VexAccidentalVoice
+                         
 
 type VexNote = { note     :: Array VexTone
                , duration :: Duration
@@ -65,8 +69,38 @@ durationToInt (Tuplet Five)       = 5
 durationToInt (Tuplet Six)        = 6
 durationToInt (Tuplet Seven)      = 7
 
-type VexAccidentalVoice = Array (Tuple Int String)
-type VexAccidentalBar   = Array VexAccidentalVoice
+durationToVexDuration :: Int -> VexDuration
+durationToVexDuration 120  = 16
+durationToVexDuration 240  = 8
+durationToVexDuration 480  = 4
+durationToVexDuration 960  = 2
+durationToVexDuration 1920 = 1
+
+midiNoteToPartialVexFlowNote :: Int -> Tuple Pitch Accidental
+midiNoteToPartialVexFlowNote 0 = Tuple C Natural
+midiNoteToPartialVexFlowNote 1 = Tuple C Sharp
+midiNoteToPartialVexFlowNote 2 = Tuple D Natural
+midiNoteToPartialVexFlowNote 3 = Tuple D Sharp
+midiNoteToPartialVexFlowNote 4 = Tuple E Natural
+midiNoteToPartialVexFlowNote 5 = Tuple F Natural
+midiNoteToPartialVexFlowNote 6 = Tuple F Sharp
+midiNoteToPartialVexFlowNote 7 = Tuple G Natural
+midiNoteToPartialVexFlowNote 8 = Tuple G Sharp
+midiNoteToPartialVexFlowNote 9 = Tuple A Natural
+midiNoteToPartialVexFlowNote 10 = Tuple A Sharp
+midiNoteToPartialVexFlowNote 11 = Tuple B Natural
+
+midiNoteToOctave :: Int -> Octave
+midiNoteToOctave n = (n - (mod n 12)) / 12
+
+midiNoteToVexTone :: Int -> VexTone
+midiNoteToVexTone midiNote = { pitch      : fst $ midiNoteToPartialVexFlowNote $ mod midiNote 12
+                             , accidental : snd $ midiNoteToPartialVexFlowNote $ mod midiNote 12
+                             , octave     : midiNoteToOctave midiNote
+                             }
+
+-- midiToVexFlowNote :: Int -> Int -> VexFlowNote
+-- midiToVexFlowNote midiNumber 
 
 noteToVexNote :: Note -> VexNote
 noteToVexNote note_ = { note : [{ pitch      : note_.pitch
@@ -99,7 +133,7 @@ extractAccidentals :: VexNote -> Array Accidental
 extractAccidentals = map _.accidental <<< _.note
 
 addIndexToAccidentals :: Array Accidental -> Array (Tuple Accidental Int)
-addIndexToAccidentals arr = Data.List.Lazy.toUnfoldable $ (Data.List.Lazy.zip (Data.List.Lazy.fromFoldable arr) (Data.List.Lazy.iterate (+1) 0))
+addIndexToAccidentals arr = Data.List.Lazy.toUnfoldable $ (Data.List.Lazy.zip (Data.List.Lazy.fromFoldable arr) (Data.List.Lazy.iterate (_ + 1) 0))
 
 isNatural :: (Tuple Accidental Int) -> Boolean
 isNatural (Tuple a b) = a /= Natural
