@@ -69,6 +69,20 @@ durationToInt (Tuplet Five)       = 5
 durationToInt (Tuplet Six)        = 6
 durationToInt (Tuplet Seven)      = 7
 
+intToDuration :: VexDuration -> Duration
+intToDuration 30 = (Even SixtyFourth)
+intToDuration 60 = (Even ThirtySecond) 
+intToDuration 120 = (Even Sixteenth)
+intToDuration 240  = (Even Eighth)
+intToDuration 480  = (Even Quarter)
+intToDuration 960  = (Even Half)  
+intToDuration 1920  = (Even Whole)
+-- durationToInt (Tuplet Three)      = 3
+-- durationToInt (Tuplet Five)       = 5
+-- durationToInt (Tuplet Six)        = 6
+-- durationToInt (Tuplet Seven)      = 7
+
+
 durationToVexDuration :: Int -> VexDuration
 durationToVexDuration 120  = 16
 durationToVexDuration 240  = 8
@@ -169,6 +183,8 @@ eighth = { note : [ { pitch : A
                     , octave : 5}
                   ]
          , duration : Even Eighth}
+
+
 
 eighthsMusic :: VexMusic
 eighthsMusic = [ [[eighth, eighth, eighth, eighth, eighth, eighth, eighth, eighth]]

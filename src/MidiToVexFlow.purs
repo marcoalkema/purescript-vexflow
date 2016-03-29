@@ -7,9 +7,9 @@ import Data.List (List(Nil, Cons), snoc)
 import Data.Either (Either(Right, Left))
 import Data.Foreign (Foreign, unsafeFromForeign, toForeign, typeOf)
 import Data.Foreign.Index (prop)
-import Data.Tuple (Tuple(Tuple))
+import Data.Tuple
 import MidiJsTypes
-import VexMusic (VexFlowPitch)
+import VexMusic
 import Data.Foldable (foldl)
 
 type MidiNote = { noteNumber    :: Int
@@ -17,9 +17,23 @@ type MidiNote = { noteNumber    :: Int
 
 foreign import unsafeF1 :: Foreign -> MidiEventFoo
 
+ppq = 480
+
 -- DISCUSS USING PARTIAL
 fromRight :: forall a b. Either a b -> b
 fromRight (Right a) = a
+
+midiNoteToVexFlowNote :: MidiNote -> VexNote
+midiNoteToVexFlowNote x  = { note     : [midiNoteToVexTone x.noteNumber]
+                           , duration : intToDuration x.deltaTime}
+
+
+midiNoteToVexTone :: Int -> VexTone
+midiNoteToVexTone midiNote = { pitch      : fst $ midiNoteToPartialVexFlowNote $ mod midiNote 12
+                             , accidental : snd $ midiNoteToPartialVexFlowNote $ mod midiNote 12
+                             , octave     : midiNoteToOctave midiNote
+                             }
+
 
 --FIX ALL FOR NOTEOFFS
 divideIntoMeasures :: Int -> List MidiNote -> List MidiNote -> List (List MidiNote)
