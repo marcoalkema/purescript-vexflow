@@ -23,11 +23,11 @@ type AccidentalBar = (Array (Array (Array (Tuple String Int))))
 
 main :: forall e. Eff (midi :: MidiPlayer.MIDI, vexFlow :: VEXFLOW, dom :: DOM | e) Unit
 main = do
-  MidiPlayer.loadFile "bower_components/purescript-midiplayer/midi/1bar8s3.mid"
+  MidiPlayer.loadFile "bower_components/purescript-midiplayer/midi/1bar8s4.mid"
   MidiPlayer.loadPlugin { soundfontUrl: "bower_components/midi/examples/soundfont/"
                   , instrument:   "acoustic_grand_piano"
                   }
-    (const (renderNotation MidiPlayer.getData3))
+    (const (renderNotation MidiPlayer.getData))
 
 renderNotation :: forall e. (Eff (dom :: DOM, vexFlow :: VEXFLOW | e) (Array Foreign)) -> Eff (vexFlow :: VEXFLOW, dom :: DOM | e) Unit
 renderNotation dat = do
