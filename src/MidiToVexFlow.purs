@@ -6,144 +6,77 @@ import Control.Monad.Eff.Console (CONSOLE, log)
 import Data.List (List(Nil, Cons), snoc)
 import Data.Either (Either(Right, Left))
 import Data.Foreign (Foreign, unsafeFromForeign, toForeign, typeOf)
+import Data.Foreign.Index (prop)
 import Data.Tuple (Tuple(Tuple))
-import MidiJsTypes (MidiEvent2)
+import MidiJsTypes
 import VexMusic (VexFlowPitch)
 import Data.Foldable (foldl)
 
-type VexFoo = {pitch :: Array VexFlowPitch, duration :: Int, subType :: String}
+type MidiNote = { noteNumber    :: Int
+                , deltaTime     :: Int}
 
-lastNoteDuration :: forall e. Array Foreign -> Eff (console :: CONSOLE, midi :: MidiPlayer.MIDI | e) Unit
-lastNoteDuration midiTrack = do
-  let songDuration :: Int
-      songDuration = foldl (\acc midiEvent -> (showDeltaTime midiEvent) + acc) 0 midiTrack
-  ticksPerBeat <- MidiPlayer.getTicksPerBeat
-  log $ show ticksPerBeat
-  log $ typeOf $ toForeign ticksPerBeat
-  let trackDuration = ticksPerBeat + songDuration
-  log $ show trackDuration
+foreign import unsafeF1 :: Foreign -> MidiEventFoo
 
-hasSubType :: String -> Foreign -> Boolean
-hasSubType subType midiEvent = showSubType midiEvent == subType
-
-showNote :: Foreign -> { pitch :: Array VexFlowPitch
-                       , duration :: Int
-                       , subType  :: String}            
-showNote midiEvent = { pitch    : [show $ showPitchNumber midiEvent]
-                     , duration : showDeltaTime midiEvent
-                     , subType  : showSubType midiEvent}
-                     
-
-showDeltaTime :: Foreign -> Int
-showDeltaTime midiEvent = (toMidiEvent $ fromRight $ Data.Foreign.Index.index 0 midiEvent).event.deltaTime
-
-showPitchNumber :: Foreign -> Int
-showPitchNumber midiEvent = (toMidiEvent $ fromRight $ Data.Foreign.Index.index 0 midiEvent).event.noteNumber
-
-showSubType :: Foreign -> String
-showSubType midiEvent = (toMidiEvent $ fromRight $ Data.Foreign.Index.index 0 midiEvent).event.subtype
-
-toMidiEvent :: Foreign -> MidiEvent2
-toMidiEvent = unsafeFromForeign 
-
-showMidiEvent :: Foreign -> MidiEvent2
-showMidiEvent foreignObject = unsafeFromForeign $ fromRight $ Data.Foreign.Index.index 0 foreignObject
-
+-- DISCUSS USING PARTIAL
 fromRight :: forall a b. Either a b -> b
 fromRight (Right a) = a
 
-divideIntoMeasures :: Int -> List VexFoo -> List Foreign -> List (List VexFoo)
+--FIX ALL FOR NOTEOFFS
+divideIntoMeasures :: Int -> List MidiNote -> List MidiNote -> List (List MidiNote)
 divideIntoMeasures accumulatedDeltaTime accXs Nil = Nil
-divideIntoMeasures accumulatedDeltaTime accXs (Cons x xs) = if accumulatedDeltaTime + (showDeltaTime x) < measure then
-                                                               divideIntoMeasures ((showDeltaTime x) + accumulatedDeltaTime) (snoc accXs (showNote x)) xs
-                                                             else if accumulatedDeltaTime + (showDeltaTime x) == measure then
-                                                                    (Cons (snoc accXs (showNote x)) (divideIntoMeasures 0 Nil xs))
+divideIntoMeasures accumulatedDeltaTime accXs (Cons x xs) = if accumulatedDeltaTime + x.deltaTime < measure then
+                                                               divideIntoMeasures (x.deltaTime + accumulatedDeltaTime) (snoc accXs x) xs
+                                                             else if accumulatedDeltaTime + (x.deltaTime) == measure then
+                                                                    (Cons (snoc accXs x) (divideIntoMeasures 0 Nil xs))
                                                                   else
-                                                                    (Cons (snoc accXs (insertNewDeltaTime x lastNoteDeltaTime))) (divideIntoMeasures lastNoteDeltaTime (Cons (insertNewDeltaTime x newFirstNoteDeltaTime) Nil) xs)
+                                                                    (Cons (snoc accXs (insertNewDeltaTime x lastNoteDeltaTime)))
+                                                                    (divideIntoMeasures 0 Nil (Cons (insertNewDeltaTime x newFirstNoteDeltaTime) xs))
     where
       measure               = 480 * 4
       lastNoteDeltaTime     = measure - accumulatedDeltaTime
-      newFirstNoteDeltaTime = (showDeltaTime x) - lastNoteDeltaTime
+      newFirstNoteDeltaTime = x.deltaTime - lastNoteDeltaTime
 
-insertNewDeltaTime :: Foreign -> Int -> VexFoo
-insertNewDeltaTime midiEvent n =  { pitch    : [show $ showPitchNumber midiEvent]
-                                  , duration : n
-                                  , subType  : showSubType midiEvent}
+insertNewDeltaTime :: MidiNote -> Int -> MidiNote
+insertNewDeltaTime midiNote n =  { noteNumber : midiNote.noteNumber
+                                 , deltaTime  : n }
 
-
--- REPLACE WITH WRITER
-
-toMIDIEvent :: Foreign -> MidiJsTypes.MidiEventFoo
-toMIDIEvent midiObject = (unsafeFromForeign $ fromRight $ Data.Foreign.Index.index 0 midiObject).event
-
-midiEventWriter :: List Foreign -> List (Tuple MidiJsTypes.MidiEventFoo Boolean)
-midiEventWriter = map (\midiObject -> Tuple (toMIDIEvent midiObject) false)
-
---ONLY DO IF NOTEON
-
--- calculateDuration :: List (Tuple MidiJsTypes.MidiEventFoo Boolean) -> List { pitch    :: Int
---                                                                            , duration :: Int}
--- calculateDuration Nil = Nil 
--- calculateDuration (Cons (Tuple (MidiJsTypes.NoteOn midiEvent) isRead) xs) = let noteOff = fromRight $ findNoteOff midiEvent.noteNumber xs
---                                                                             in
---                                                                              if midiEvent.subType == "noteOn" then
---                                                                                Cons { pitch     : midiEvent.noteNumber
---                                                                                     , duration  : (accumulateDeltaTime midiEvent.noteNumber 0 xs)} 
---                                                                                (calculateDuration (replaceBy (==) (noteOff) (toRead (Tuple midiEvent isRead)) xs))
---                                                                             else
---                                                                               calculateDuration xs
--- calculateDuration (Cons x xs) = calculateDuration xs
-                                     
---   if (fst x).subType == "noteOn" then
---                                   toList [(fst x)]
---                                 else
---                                   calculateDuration xs
+--REPLACE WITH WRITER
+midiEventWriter :: List MidiEventFoo -> List (Tuple MidiJsTypes.MidiEventFoo Boolean)
+midiEventWriter = map (\midiObject -> Tuple midiObject false)
 
 toRead :: Tuple MidiJsTypes.MidiEventFoo Boolean -> Tuple MidiJsTypes.MidiEventFoo Boolean
 toRead (Tuple midiEvent read) = Tuple midiEvent true
 
-midiToString :: Tuple MidiJsTypes.MidiEventFoo Boolean -> String
-midiToString x = case x of
-  (Tuple (MidiJsTypes.NoteOn y) _) -> if y.subType == "noteOn" then
-                                        show y.noteNumber
-                                        else
-                                        show y.deltaTime
-  (Tuple (MidiJsTypes.TrackName _) _) -> "hoi1"
-  (Tuple (MidiJsTypes.InstrumentName _) _) -> "hoi2"
-  (Tuple (MidiJsTypes.TimeSignature _) _) -> "hoi3"
-  (Tuple (MidiJsTypes.KeySignature _) _) -> "hoi4"
-  (Tuple (MidiJsTypes.Marker _) _) -> "hoi5"
-  (Tuple y x) -> show y
+calculateDuration :: List (Tuple MidiJsTypes.MidiEventFoo Boolean) -> List MidiNote
+calculateDuration Nil = Nil 
+calculateDuration midiEvents@(Cons (Tuple (MidiJsTypes.NoteOn midiEvent) isRead) xs) = let noteOff :: Tuple MidiEventFoo Boolean
+                                                                                           noteOff =  fromRight $ findNoteOff midiEvent.noteNumber xs
+                                                                            in
+                                                                             if midiEvent.subtype == "noteOn" then
+                                                                               Cons { noteNumber     : midiEvent.noteNumber
+                                                                                    , deltaTime  : (accumulateDeltaTime midiEvent.noteNumber 0 midiEvents) - midiEvent.deltaTime} 
+                                                                               (calculateDuration (replaceBy (==) (noteOff) (toRead noteOff) xs))
+                                                                            else
+                                                                              calculateDuration xs
+calculateDuration (Cons x xs)                                                        = calculateDuration xs
 
-midiToString2 :: Tuple MidiJsTypes.MidiEventFoo Boolean -> String
-midiToString2 (Tuple (MidiJsTypes.NoteOn x) y) = show x.deltaTime
-
---EXTRACT MIDIEVENT FROM FOREIGN TYPE IN ORDER TO BE ABLE TO USE IN REPLACEby
 accumulateDeltaTime :: Int -> Int -> List (Tuple MidiJsTypes.MidiEventFoo Boolean) -> Int
 accumulateDeltaTime _ _ Nil = 0
-accumulateDeltaTime noteNumber acc (Cons x xs) = case x of
-  Tuple (MidiJsTypes.NoteOn y) isRead  -> accumulateDeltaTime noteNumber (acc + y.deltaTime) xs
-  Tuple (MidiJsTypes.NoteOff y) isRead -> if y.noteNumber == noteNumber && isRead == false then
-                               acc + y.noteNumber
+accumulateDeltaTime noteNumber acc (Cons (Tuple (MidiJsTypes.NoteOn y) isRead) xs)  = accumulateDeltaTime noteNumber (acc + y.deltaTime) xs
+accumulateDeltaTime noteNumber acc (Cons (Tuple (MidiJsTypes.NoteOff y) isRead) xs) = if y.noteNumber == noteNumber && isRead == false then
+                               acc + y.deltaTime
                              else
-                               accumulateDeltaTime noteNumber (acc + y.noteNumber) xs
+                               accumulateDeltaTime noteNumber (acc + y.deltaTime) xs
                                
 replaceBy :: forall a. (a -> a -> Boolean) -> a -> a -> List a -> List a
-replaceBy _ _ _ Nil = Nil
+replaceBy _ _ _ Nil                     = Nil
 replaceBy (==) x z (Cons y ys) | x == y = Cons z ys
-replaceBy (==) x z (Cons y ys) = Cons y (replaceBy (==) x z ys)
+replaceBy (==) x z (Cons y ys)          = Cons y (replaceBy (==) x z ys)
 
 findNoteOff :: Int -> List (Tuple MidiJsTypes.MidiEventFoo Boolean) -> Either String (Tuple MidiJsTypes.MidiEventFoo Boolean)
-findNoteOff _ Nil = Left "No corresponding noteOff found."
-findNoteOff n (Cons x xs) = case x of
-  Tuple (MidiJsTypes.NoteOff y) isRead -> if y.noteNumber == n && isRead == false then
-                                      Right x
-                                    else
-                                      findNoteOff n xs
-  _       -> findNoteOff n xs
-
-kip :: {n :: Int
-       ,s :: String}
-kip = {n : 5, s : "hoi"}
-mauw :: {n :: Int, s :: String}
-mauw = kip {s = "mauw"}
+findNoteOff _ Nil = Left "No corresponding unread noteOff found."
+findNoteOff n (Cons noteOff@(Tuple (MidiJsTypes.NoteOff midiEvent) isRead) xs) = if midiEvent.noteNumber == n && isRead == false then
+                                                                   Right noteOff
+                                                                 else
+                                                                   findNoteOff n xs
+findNoteOff n (Cons _ xs)                                                      = findNoteOff n xs

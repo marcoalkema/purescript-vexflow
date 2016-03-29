@@ -9,12 +9,13 @@ import VexFlow
 import VexMusic
 import Music (KeySignature, Clef)
 import MidiJS as MidiPlayer
-import MidiJsTypes (MidiEvent2, MidiEvent)
+import MidiJsTypes
 import Data.Foreign (Foreign, unsafeFromForeign, toForeign, typeOf)
 import Data.Foldable (foldl)
 import Data.List (List(Nil, Cons), snoc, toUnfoldable, toList, delete)
 import Data.Either
 import MidiToVexFlow
+import Data.Array
 
 foreign import data CONSOLE :: !
 
@@ -22,11 +23,11 @@ type AccidentalBar = (Array (Array (Array (Tuple String Int))))
 
 main :: forall e. Eff (midi :: MidiPlayer.MIDI, vexFlow :: VEXFLOW, dom :: DOM | e) Unit
 main = do
-  MidiPlayer.loadFile "bower_components/purescript-midiplayer/midi/1bar8s.mid"
+  MidiPlayer.loadFile "bower_components/purescript-midiplayer/midi/tiedbar.mid"
   MidiPlayer.loadPlugin { soundfontUrl: "bower_components/midi/examples/soundfont/"
                   , instrument:   "acoustic_grand_piano"
                   }
-    (const (renderNotation MidiPlayer.getData))
+    (const (renderNotation MidiPlayer.getData3))
 
 renderNotation :: forall e. (Eff (dom :: DOM, vexFlow :: VEXFLOW | e) (Array Foreign)) -> Eff (vexFlow :: VEXFLOW, dom :: DOM | e) Unit
 renderNotation dat = do
@@ -35,9 +36,22 @@ renderNotation dat = do
   drawPrimaryStave renderer clef "B"
   drawNotation (testMusic eighthsMusic) (musicWithIndexedAccidentals eighthsMusic) renderer
   midiObjects <- dat
-  let test :: Array (String)
-      test = toUnfoldable $ map midiToString $ midiEventWriter $ toList midiObjects
-  logger test
+  let sortedData = map unsafeF1 midiObjects
+  let processed :: Array { noteNumber    :: Int
+                                                                           , deltaTime :: Int}
+      processed = toUnfoldable $ calculateDuration $ midiEventWriter $ toList sortedData
+  -- let noteOff :: Tuple MidiEventFoo Boolean
+  --     noteOff =  fromRight $ findNoteOff 74 $ midiEventWriter $ toList sortedData
+  logger processed
+  let processed1 :: Array (Array { noteNumber    :: Int
+                                 , deltaTime :: Int})
+      processed1 = toArray $ divideIntoMeasures 0 Nil $ calculateDuration $ midiEventWriter $ toList sortedData
+  logger processed1
+
+  
+toArray :: forall a. List (List a) -> Array (Array a)
+toArray lst = toUnfoldable $ map (\x -> toUnfoldable x) lst
+
 
 drawNotation :: forall e. VexFlowMusic -> Array AccidentalBar -> VexFlow -> Eff (vexFlow :: VEXFLOW | e) Unit
 drawNotation music accidentals renderer = do
