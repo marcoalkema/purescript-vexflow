@@ -1,9 +1,0 @@
-;; This buffer is for notes you don't want to save, and for Lisp evaluation.
-;; If you want to create a file, visit that file with C-x C-f,
-;; then enter the text in that file's own buffer.
-
-
-quantize :: Int -> Int -> Int
-quantize acc n | n < (acc * res) = acc * res
-quantize acc n | n > (acc * res) && n < (acc * res + (res / 2)) = acc * res
-quantize acc n | n > (acc * res) && n > (acc * res + (res / 2)) = quantize (acc + 1) n
