@@ -21,47 +21,40 @@ foreign import data CONSOLE :: !
 
 type AccidentalBar = (Array (Array (Array (Tuple String Int))))
 
-main :: forall e. Eff (midi :: MidiPlayer.MIDI, vexFlow :: VEXFLOW, dom :: DOM | e) Unit
+main :: forall e. Eff (dom :: DOM, midi :: MidiPlayer.MIDI, vexFlow :: VEXFLOW | e) Unit
 main = do
-  MidiPlayer.loadFile "bower_components/purescript-midiplayer/midi/1bar8s4.mid"
+  MidiPlayer.loadFile "bower_components/purescript-midiplayer/midi/1bar8s8.mid"
   MidiPlayer.loadPlugin { soundfontUrl: "bower_components/midi/examples/soundfont/"
                   , instrument:   "acoustic_grand_piano"
                   }
-    (const (renderNotation MidiPlayer.getData))
+    (const (renderNotation MidiPlayer.getData3))
 
-renderNotation :: forall e. (Eff (dom :: DOM, vexFlow :: VEXFLOW | e) (Array Foreign)) -> Eff (vexFlow :: VEXFLOW, dom :: DOM | e) Unit
+renderNotation :: forall e. (Eff (dom :: DOM, midi :: MidiPlayer.MIDI, vexFlow :: VEXFLOW | e) (Array Foreign)) -> Eff (dom :: DOM, vexFlow :: VEXFLOW, midi :: MidiPlayer.MIDI | e) Unit
 renderNotation dat = do
   midiObjects <- dat
-  let sortedData = map unsafeF1 midiObjects
-  let measuredMidi :: Array (Array MidiNote)
-      measuredMidi = toArray $ divideIntoMeasures 0 Nil $ calculateDuration $ midiEventWriter $ filterData $ toList sortedData
+  let sortedData :: Array MidiEventFoo
+      sortedData = map unsafeF1 midiObjects
+      -- <<<
+      measuredMidi :: Array (Array MidiNote)
+      measuredMidi = toArray $ divideIntoMeasures 0 Nil $ map (quantizeNote 0) $ calculateDuration $ midiEventWriter $ filterData $ toList sortedData
   let toVexFlow = map (\x -> [map midiNoteToVexFlowNote x]) measuredMidi
   canvas <- createCanvas "notationCanvas"
   renderer <- createRenderer canvas
   drawPrimaryStave renderer clef "C"
   drawNotation (testMusic toVexFlow) (musicWithIndexedAccidentals toVexFlow) renderer
-
-  -- let processed :: Array { noteNumber    :: Int
-  --                        , deltaTime :: Int}
-  --     processed = toUnfoldable $ calculateDuration $ midiEventWriter $ toList sortedData
-  -- let noteOff :: Tuple MidiEventFoo Boolean
-  --     noteOff =  fromRight $ findNoteOff 74 $ midiEventWriter $ toList sortedData
-
-  -- let processed1 :: Array (Array { noteNumber    :: Int
-  --                                , deltaTime :: Int})
-  --     processed1 = toArray $ divideIntoMeasures 0 Nil $ calculateDuration $ midiEventWriter $ toList sortedData
-  -- logger processed1
+  ticksPerBeat <- MidiPlayer.getTicksPerBeat
+  logger ticksPerBeat
 
 filterData :: List MidiEventFoo -> List MidiEventFoo
-filterData Nil = Nil
-filterData (Cons y@(NoteOn x) xs) = (Cons y (filterData xs))
-filterData (Cons y@(NoteOff x) xs ) = (Cons y (filterData xs))
-filterData (Cons x xs) = filterData xs
+filterData Nil                      = Nil
+filterData (Cons y@(NoteOn x) xs)   = Cons y (filterData xs)
+filterData (Cons y@(NoteOff x) xs)  = Cons y (filterData xs)
+filterData (Cons x xs)              = filterData xs
   
 toArray :: forall a. List (List a) -> Array (Array a)
 toArray lst = toUnfoldable $ map (\x -> toUnfoldable x) lst
 
-drawNotation :: forall e. VexFlowMusic -> Array AccidentalBar -> VexFlow -> Eff (vexFlow :: VEXFLOW, dom :: DOM | e) Unit
+drawNotation :: forall e. VexFlowMusic -> Array AccidentalBar -> VexFlow -> Eff (vexFlow :: VEXFLOW | e) Unit
 drawNotation music accidentals renderer = do
   let stave = drawStave renderer 280.0 1.0
   let voices = Data.Array.zipWith drawVoice music accidentals
@@ -77,13 +70,12 @@ drawVoice bar accidentals context stave = do
   VexFlow.drawVoice context stave voicing
   drawBeams beamedNotes context
 
--- drawStave :: forall e. VexFlow -> Number -> Number -> Int -> (VexFlow -> VexFlow -> (Eff (vexFlow :: VEXFLOW | e) Unit)) -> Eff (vexFlow :: VEXFLOW, dom :: DOM | e) Unit
+drawStave :: forall e. VexFlow -> Number -> Number -> Int -> (VexFlow -> VexFlow -> (Eff (vexFlow :: VEXFLOW | e) Unit)) -> Eff (vexFlow :: VEXFLOW | e) Unit
 drawStave renderer w y x voice = do
   ctx <- createCtx renderer
   stave <- createStave (80 + x * 280) y w
   VexFlow.drawStave stave ctx
   voice ctx stave
-  logger $ show x
 
 drawPrimaryStave :: forall e. VexFlow -> Clef -> KeySignature -> Eff (vexFlow :: VEXFLOW | e) Unit
 drawPrimaryStave renderer clef key = do

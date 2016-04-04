@@ -34,22 +34,21 @@ midiNoteToVexTone midiNote = { pitch      : fst $ midiNoteToPartialVexFlowNote $
                              , octave     : midiNoteToOctave midiNote
                              }
 
-
 --FIX ALL FOR NOTEOFFS
 divideIntoMeasures :: Int -> List MidiNote -> List MidiNote -> List (List MidiNote)
 divideIntoMeasures accumulatedDeltaTime accXs Nil = Nil
 divideIntoMeasures accumulatedDeltaTime accXs (Cons x xs) = if accumulatedDeltaTime + x.deltaTime < measure then
-                                                               divideIntoMeasures (x.deltaTime + accumulatedDeltaTime) (snoc accXs x) xs
-                                                             else if accumulatedDeltaTime + (x.deltaTime) == measure then
-                                                                    (Cons (snoc accXs x) (divideIntoMeasures 0 Nil xs))
-                                                                  else
-                                                                    (Cons (snoc accXs (insertNewDeltaTime x lastNoteDeltaTime)))
-                                                                    (divideIntoMeasures 0 Nil (Cons (insertNewDeltaTime x newFirstNoteDeltaTime) xs))
-    where
-      measure               = 480 * 4
-      lastNoteDeltaTime     = measure - accumulatedDeltaTime
-      newFirstNoteDeltaTime = x.deltaTime - lastNoteDeltaTime
-
+                                                              divideIntoMeasures (x.deltaTime + accumulatedDeltaTime) (snoc accXs x) xs
+                                                            else if accumulatedDeltaTime + (x.deltaTime) == measure then
+                                                                   (Cons (snoc accXs x) (divideIntoMeasures 0 Nil xs))
+                                                                 else
+                                                                   (Cons (snoc accXs (insertNewDeltaTime x lastNoteDeltaTime)))
+                                                                   (divideIntoMeasures 0 Nil (Cons (insertNewDeltaTime x newFirstNoteDeltaTime) xs))
+  where
+    measure               = ppq * 4
+    lastNoteDeltaTime     = measure - accumulatedDeltaTime
+    newFirstNoteDeltaTime = x.deltaTime - lastNoteDeltaTime
+                              
 insertNewDeltaTime :: MidiNote -> Int -> MidiNote
 insertNewDeltaTime midiNote n =  { noteNumber : midiNote.noteNumber
                                  , deltaTime  : n }
@@ -94,3 +93,13 @@ findNoteOff n (Cons noteOff@(Tuple (MidiJsTypes.NoteOff midiEvent) isRead) xs) =
                                                                  else
                                                                    findNoteOff n xs
 findNoteOff n (Cons _ xs)                                                      = findNoteOff n xs
+
+res = ppq / 4
+
+-- quantizeTriplets
+
+quantizeNote :: Int -> MidiNote -> MidiNote
+quantizeNote acc event | event.deltaTime < (acc * res)                                              = event {deltaTime = acc * res}
+quantizeNote acc event | event.deltaTime > (acc * res) && event.deltaTime < (acc * res + (res / 2)) = event {deltaTime = acc * res}
+quantizeNote acc event | event.deltaTime > (acc * res) && event.deltaTime > (acc * res + (res / 2)) = quantizeNote (acc + 1) event
+quantizeNote acc event                                                                              = event
