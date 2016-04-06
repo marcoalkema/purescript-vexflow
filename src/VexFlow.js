@@ -122,17 +122,20 @@ module.exports = {
 	};
     },
 
-    addTies: function(voices){
-	return function(){
-	    return voices.map(function(voice, i){
-		return new Vex.Flow.StaveTie({
-		    first_note: voice[i],
-		    last_note: voice[i+1],
-		    first_indices: [0],
-		    last_indices: [0]
+    addTies: function(voice){
+	return function(indices){
+	    return function() {
+		return indices.map(function(index){
+		    console.log(index);
+		    console.log(voice);
+		    return new Vex.Flow.StaveTie({
+			first_note: voice[0][index],
+			last_note: voice[0][index+1],
+			first_indices: [0],
+			last_indices: [0]
+		    });
 		});
-		
-	    });
+	    };
 	};
     },    
     
@@ -164,6 +167,16 @@ module.exports = {
     		};
     	    };
     	};
+    },
+
+    drawTies: function(tiedVoice) {
+	return function(ctx){
+	    return function(){
+		tiedVoice.map(function(voice){
+		    return voice.setContext(ctx).draw();
+		});
+	    };
+	};
     },
 
     drawBeams: function(beams) {

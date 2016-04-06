@@ -13,19 +13,21 @@ import VexMusic
 import Data.Foldable (foldl)
 
 type MidiNote = { noteNumber    :: Int
-                , deltaTime     :: Int}
+                , deltaTime     :: Number
+                , hasFirstTie   :: Boolean
+                , hasEndingTie  :: Boolean
+                , hasDot        :: Boolean
+                }
 
-foreign import unsafeF1 :: Foreign -> MidiEventFoo
-
-ppq = 480
+foreign import unsafeF1 :: Foreign -> MidiEvent
 
 -- DISCUSS USING PARTIAL
 fromRight :: forall a b. Either a b -> b
 fromRight (Right a) = a
 
-midiNoteToVexFlowNote :: MidiNote -> VexNote
-midiNoteToVexFlowNote x  = { note     : [midiNoteToVexTone x.noteNumber]
-                           , duration : intToDuration x.deltaTime}
+midiNoteToVexFlowNote :: Number -> MidiNote -> VexNote
+midiNoteToVexFlowNote ticksPerBeat x = { note     : [midiNoteToVexTone x.noteNumber]
+                                       , duration : deltaTimetoDuration ticksPerBeat x.deltaTime}
 
 
 midiNoteToVexTone :: Int -> VexTone
@@ -35,46 +37,84 @@ midiNoteToVexTone midiNote = { pitch      : fst $ midiNoteToPartialVexFlowNote $
                              }
 
 --FIX ALL FOR NOTEOFFS
-divideIntoMeasures :: Int -> List MidiNote -> List MidiNote -> List (List MidiNote)
-divideIntoMeasures accumulatedDeltaTime accXs Nil = Nil
-divideIntoMeasures accumulatedDeltaTime accXs (Cons x xs) = if accumulatedDeltaTime + x.deltaTime < measure then
-                                                              divideIntoMeasures (x.deltaTime + accumulatedDeltaTime) (snoc accXs x) xs
-                                                            else if accumulatedDeltaTime + (x.deltaTime) == measure then
-                                                                   (Cons (snoc accXs x) (divideIntoMeasures 0 Nil xs))
+divideIntoMeasures :: Number -> Int -> Number -> List MidiNote -> List MidiNote -> List (List MidiNote)
+divideIntoMeasures ticksPerBeat numerator accumulatedDeltaTime accXs Nil = Nil
+divideIntoMeasures ticksPerBeat numerator accumulatedDeltaTime accXs (Cons x xs) = if accumulatedDeltaTime + x.deltaTime < measure then
+                                                              divideIntoMeasures ticksPerBeat numerator (x.deltaTime + accumulatedDeltaTime) (snoc accXs x) xs
+                                                            else if accumulatedDeltaTime + x.deltaTime == measure then
+                                                                   (Cons (snoc accXs x) (divideIntoMeasures ticksPerBeat numerator 0.0 Nil xs))
                                                                  else
-                                                                   (Cons (snoc accXs (insertNewDeltaTime x lastNoteDeltaTime)))
-                                                                   (divideIntoMeasures 0 Nil (Cons (insertNewDeltaTime x newFirstNoteDeltaTime) xs))
+                                                                   (Cons (snoc accXs (setFirstTie $ insertNewDeltaTime x lastNoteDeltaTime)))
+                                                                   (divideIntoMeasures ticksPerBeat numerator 0.0 Nil (Cons (setEndingTie $ insertNewDeltaTime x newFirstNoteDeltaTime) xs))
+--- TPB * Numerator
   where
-    measure               = ppq * 4
+    measure               = ticksPerBeat * 3.0
     lastNoteDeltaTime     = measure - accumulatedDeltaTime
     newFirstNoteDeltaTime = x.deltaTime - lastNoteDeltaTime
-                              
-insertNewDeltaTime :: MidiNote -> Int -> MidiNote
-insertNewDeltaTime midiNote n =  { noteNumber : midiNote.noteNumber
-                                 , deltaTime  : n }
+
+setTies :: Number -> Number -> Number -> List MidiNote -> List MidiNote -> List (List MidiNote)
+setTies ticksPerBeat numerator accumulatedDeltaTime accXs Nil = Cons Nil Nil
+setTies ticksPerBeat numerator accumulatedDeltaTime accXs (Cons x xs) = if accumulatedDeltaTime + x.deltaTime < ticksPerBeat then
+                                                                                                       setTies ticksPerBeat numerator (x.deltaTime + accumulatedDeltaTime) (snoc accXs x) xs
+                                                                                                     else if accumulatedDeltaTime + x.deltaTime == ticksPerBeat then
+                                                                                                            Cons (snoc accXs x) (setTies ticksPerBeat numerator 0.0 Nil xs)
+                                                                                                          else
+                                                                                                            (Cons (snoc accXs (setFirstTie $ insertNewDeltaTime x lastNoteDeltaTime)))
+                                                                    (setTies ticksPerBeat numerator 0.0 Nil (Cons (setEndingTie $ insertNewDeltaTime x newFirstNoteDeltaTime) xs))
+  where
+    lastNoteDeltaTime     = ticksPerBeat - accumulatedDeltaTime
+    newFirstNoteDeltaTime = x.deltaTime - lastNoteDeltaTime
+                                                                                                            
+-- setTies divideIntoMeasures ticksPerBeat numerator accumulatedDeltaTime accXs midiEvent@(Cons x xs) | x == (ticksPerBeat * numerator) = midiEvent
+-- setTies divideIntoMeasures ticksPerBeat numerator accumulatedDeltaTime accXs midiEvent@(Cons x xs) | x.deltaTime + accumulatedDeltaTime == ticksPerBeat = (Cons (snoc accXs x) (divideIntoMeasures ticksPerBeat numerator 0.0 Nil xs))
+-- setTies divideIntoMeasures ticksPerBeat numerator accumulatedDeltaTime accXs midiEvent@(Cons x xs) | x.deltaTime + accumulatedDeltaTime > ticksPerBeat = 
+
+setFirstTie :: MidiNote -> MidiNote
+setFirstTie midiNote =  { noteNumber   : midiNote.noteNumber
+                        , deltaTime    : midiNote.deltaTime
+                        , hasFirstTie  : true
+                        , hasEndingTie : false
+                        , hasDot       : false}
+
+setEndingTie :: MidiNote -> MidiNote
+setEndingTie midiNote =  { noteNumber   : midiNote.noteNumber
+                         , deltaTime    : midiNote.deltaTime
+                         , hasFirstTie  : false
+                         , hasEndingTie : true
+                         , hasDot       : false}
+                            
+insertNewDeltaTime :: MidiNote -> Number -> MidiNote
+insertNewDeltaTime midiNote n =  { noteNumber   : midiNote.noteNumber
+                                 , deltaTime    : n
+                                 , hasFirstTie  : false
+                                 , hasEndingTie : false
+                                 , hasDot       : false}
 
 --REPLACE WITH WRITER
-midiEventWriter :: List MidiEventFoo -> List (Tuple MidiJsTypes.MidiEventFoo Boolean)
+midiEventWriter :: List MidiEvent -> List (Tuple MidiJsTypes.MidiEvent Boolean)
 midiEventWriter = map (\midiObject -> Tuple midiObject false)
 
-toRead :: Tuple MidiJsTypes.MidiEventFoo Boolean -> Tuple MidiJsTypes.MidiEventFoo Boolean
+toRead :: Tuple MidiJsTypes.MidiEvent Boolean -> Tuple MidiJsTypes.MidiEvent Boolean
 toRead (Tuple midiEvent read) = Tuple midiEvent true
 
-calculateDuration :: List (Tuple MidiJsTypes.MidiEventFoo Boolean) -> List MidiNote
+calculateDuration :: List (Tuple MidiJsTypes.MidiEvent Boolean) -> List MidiNote
 calculateDuration Nil = Nil 
-calculateDuration midiEvents@(Cons (Tuple (MidiJsTypes.NoteOn midiEvent) isRead) xs) = let noteOff :: Tuple MidiEventFoo Boolean
+calculateDuration midiEvents@(Cons (Tuple (MidiJsTypes.NoteOn midiEvent) isRead) xs) = let noteOff :: Tuple MidiEvent Boolean
                                                                                            noteOff =  fromRight $ findNoteOff midiEvent.noteNumber xs
                                                                             in
                                                                              if midiEvent.subtype == "noteOn" then
                                                                                Cons { noteNumber     : midiEvent.noteNumber
-                                                                                    , deltaTime  : (accumulateDeltaTime midiEvent.noteNumber 0 midiEvents) - midiEvent.deltaTime} 
+                                                                                    , deltaTime  : (accumulateDeltaTime midiEvent.noteNumber 0.0 midiEvents) - midiEvent.deltaTime
+                                                                                    , hasFirstTie   : false
+                                                                                    , hasEndingTie  : false
+                                                                                    , hasDot        : false}
                                                                                (calculateDuration (replaceBy (==) (noteOff) (toRead noteOff) xs))
                                                                             else
                                                                               calculateDuration xs
 calculateDuration (Cons x xs)                                                        = calculateDuration xs
 
-accumulateDeltaTime :: Int -> Int -> List (Tuple MidiJsTypes.MidiEventFoo Boolean) -> Int
-accumulateDeltaTime _ _ Nil = 0
+accumulateDeltaTime :: Int -> Number -> List (Tuple MidiJsTypes.MidiEvent Boolean) -> Number
+accumulateDeltaTime _ _ Nil = 0.0
 accumulateDeltaTime noteNumber acc (Cons (Tuple (MidiJsTypes.NoteOn y) isRead) xs)  = accumulateDeltaTime noteNumber (acc + y.deltaTime) xs
 accumulateDeltaTime noteNumber acc (Cons (Tuple (MidiJsTypes.NoteOff y) isRead) xs) = if y.noteNumber == noteNumber && isRead == false then
                                acc + y.deltaTime
@@ -86,7 +126,7 @@ replaceBy _ _ _ Nil                     = Nil
 replaceBy (==) x z (Cons y ys) | x == y = Cons z ys
 replaceBy (==) x z (Cons y ys)          = Cons y (replaceBy (==) x z ys)
 
-findNoteOff :: Int -> List (Tuple MidiJsTypes.MidiEventFoo Boolean) -> Either String (Tuple MidiJsTypes.MidiEventFoo Boolean)
+findNoteOff :: Int -> List (Tuple MidiJsTypes.MidiEvent Boolean) -> Either String (Tuple MidiJsTypes.MidiEvent Boolean)
 findNoteOff _ Nil = Left "No corresponding unread noteOff found."
 findNoteOff n (Cons noteOff@(Tuple (MidiJsTypes.NoteOff midiEvent) isRead) xs) = if midiEvent.noteNumber == n && isRead == false then
                                                                    Right noteOff
@@ -94,12 +134,10 @@ findNoteOff n (Cons noteOff@(Tuple (MidiJsTypes.NoteOff midiEvent) isRead) xs) =
                                                                    findNoteOff n xs
 findNoteOff n (Cons _ xs)                                                      = findNoteOff n xs
 
-res = ppq / 4
-
 -- quantizeTriplets
 
-quantizeNote :: Int -> MidiNote -> MidiNote
-quantizeNote acc event | event.deltaTime < (acc * res)                                              = event {deltaTime = acc * res}
-quantizeNote acc event | event.deltaTime > (acc * res) && event.deltaTime < (acc * res + (res / 2)) = event {deltaTime = acc * res}
-quantizeNote acc event | event.deltaTime > (acc * res) && event.deltaTime > (acc * res + (res / 2)) = quantizeNote (acc + 1) event
-quantizeNote acc event                                                                              = event
+quantizeNote :: Number -> Number -> MidiNote -> MidiNote
+quantizeNote ticksPerBeat acc event | event.deltaTime < (acc * ticksPerBeat / 4.0)                                                                          = event {deltaTime = acc * (ticksPerBeat / 4.0)}
+quantizeNote ticksPerBeat acc event | event.deltaTime > (acc * ticksPerBeat / 4.0) && event.deltaTime < (acc * (ticksPerBeat / 4.0) + (ticksPerBeat / 8.0)) = event {deltaTime = acc * (ticksPerBeat / 4.0)}
+quantizeNote ticksPerBeat acc event | event.deltaTime > (acc * ticksPerBeat / 4.0) && event.deltaTime > (acc * (ticksPerBeat / 4.0) + (ticksPerBeat / 8.0)) = quantizeNote ticksPerBeat (acc + 1.0) event
+quantizeNote ticksPerBeat acc event                                                                                                                         = event

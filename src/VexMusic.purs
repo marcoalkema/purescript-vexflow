@@ -69,26 +69,41 @@ durationToInt (Tuplet Five)       = 5
 durationToInt (Tuplet Six)        = 6
 durationToInt (Tuplet Seven)      = 7
 
-intToDuration :: VexDuration -> Duration
-intToDuration 30 = (Even SixtyFourth)
-intToDuration 60 = (Even ThirtySecond) 
-intToDuration 120 = (Even Sixteenth)
-intToDuration 240  = (Even Eighth)
-intToDuration 480  = (Even Quarter)
-intToDuration 960  = (Even Half)  
-intToDuration 1920  = (Even Whole)
+-- intToDuration :: VexDuration -> Duration
+-- intToDuration 30 = (Even SixtyFourth)
+-- intToDuration 60 = (Even ThirtySecond) 
+-- intToDuration 120 = (Even Sixteenth)
+-- intToDuration 240  = (Even Eighth)
+-- intToDuration 480  = (Even Quarter)
+-- intToDuration 960  = (Even Half)  
+-- intToDuration 1920  = (Even Whole)
 -- durationToInt (Tuplet Three)      = 3
 -- durationToInt (Tuplet Five)       = 5
 -- durationToInt (Tuplet Six)        = 6
 -- durationToInt (Tuplet Seven)      = 7
 
+deltaTimetoDuration :: Number -> Number -> Duration
+deltaTimetoDuration ticksPerBeat deltaTime | deltaTime == ticksPerBeat / 4.0 = (Even Sixteenth)
+deltaTimetoDuration ticksPerBeat deltaTime | deltaTime == ticksPerBeat / 2.0 = (Even Eighth)
+deltaTimetoDuration ticksPerBeat deltaTime | deltaTime == ticksPerBeat       = (Even Quarter)
+deltaTimetoDuration ticksPerBeat deltaTime | deltaTime == ticksPerBeat * 2.0 = (Even Half)
+deltaTimetoDuration ticksPerBeat deltaTime | deltaTime == ticksPerBeat * 3.0 = (Even Half)
+deltaTimetoDuration ticksPerBeat deltaTime | deltaTime == ticksPerBeat * 4.0 = (Even Whole)
 
-durationToVexDuration :: Int -> VexDuration
-durationToVexDuration 120  = 16
-durationToVexDuration 240  = 8
-durationToVexDuration 480  = 4
-durationToVexDuration 960  = 2
-durationToVexDuration 1920 = 1
+-- durationToVexDuration :: Int -> VexDuration
+-- durationToVexDuration 120  = 16
+-- durationToVexDuration 240  = 8
+-- durationToVexDuration 480  = 4
+-- durationToVexDuration 960  = 2
+-- durationToVexDuration 1920 = 1
+
+deltaTimeToVexDuration :: Number -> Number -> Int
+deltaTimeToVexDuration ticksPerBeat deltaTime | deltaTime == ticksPerBeat / 4.0 = 16
+deltaTimeToVexDuration ticksPerBeat deltaTime | deltaTime == ticksPerBeat / 2.0 = 8
+deltaTimeToVexDuration ticksPerBeat deltaTime | deltaTime == ticksPerBeat       = 4
+deltaTimeToVexDuration ticksPerBeat deltaTime | deltaTime == ticksPerBeat * 2.0 = 2
+deltaTimeToVexDuration ticksPerBeat deltaTime | deltaTime == ticksPerBeat * 3.0 = 1
+deltaTimeToVexDuration ticksPerBeat deltaTime | deltaTime == ticksPerBeat * 4.0 = 1
 
 midiNoteToPartialVexFlowNote :: Int -> Tuple Pitch Accidental
 midiNoteToPartialVexFlowNote 0 = Tuple C Natural

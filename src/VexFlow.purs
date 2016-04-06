@@ -25,12 +25,13 @@ foreign import createKeySignature :: forall e. KeySignature -> VexFlow -> Eff (v
 foreign import createTimeSignature :: forall e. TimeSignature -> VexFlow -> Eff (vexFlow :: VEXFLOW | e) VexFlow
 foreign import createNotes        :: forall e. VexFlowBar -> Eff (vexFlow :: VEXFLOW | e) VexFlow
 foreign import addAccidentals     :: forall e. VexFlow -> Array (Array (Array (Tuple String Int))) -> Eff (vexFlow :: VEXFLOW | e) VexFlow
+foreign import addTies            :: forall e. VexFlow -> Array Int  -> Eff (vexFlow :: VEXFLOW | e) VexFlow
 foreign import addBeams           :: forall e. VexFlow -> Eff (vexFlow :: VEXFLOW | e) VexFlow
 foreign import createNewVoice     :: forall e. Number  -> Number -> Eff (vexFlow :: VEXFLOW | e) VexFlow
 foreign import addNotesToVoice    :: forall e. VexFlow -> (Eff (vexFlow :: VEXFLOW) VexFlow) -> Eff (vexFlow :: VEXFLOW | e) VexFlow
 foreign import formatter          :: forall e. VexFlow -> Number -> Eff (vexFlow :: VEXFLOW | e) Unit
 foreign import drawVoice          :: forall e. VexFlow -> VexFlow -> VexFlow -> Eff (vexFlow :: VEXFLOW | e) Unit
 foreign import drawBeams          :: forall e. VexFlow -> VexFlow -> Eff (vexFlow :: VEXFLOW | e) Unit
-foreign import drawTies           :: forall e. VexFlow -> Eff (vexFlow :: VEXFLOW | e) Unit
+foreign import drawTies           :: forall e. VexFlow -> VexFlow -> Eff (vexFlow :: VEXFLOW | e) Unit
 
 foreign import logger             :: forall a. a -> forall e. Eff (dom :: DOM | e) Unit
