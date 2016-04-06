@@ -126,8 +126,6 @@ module.exports = {
 	return function(indices){
 	    return function() {
 		return indices.map(function(index){
-		    console.log(index);
-		    console.log(voice);
 		    return new Vex.Flow.StaveTie({
 			first_note: voice[0][index],
 			last_note: voice[0][index+1],

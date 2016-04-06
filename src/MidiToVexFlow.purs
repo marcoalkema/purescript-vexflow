@@ -11,6 +11,9 @@ import Data.Tuple
 import MidiJsTypes
 import VexMusic
 import Data.Foldable (foldl)
+import Data.Maybe
+import VexFlow
+import Data.List
 
 type MidiNote = { noteNumber    :: Int
                 , deltaTime     :: Number
@@ -21,6 +24,25 @@ type MidiNote = { noteNumber    :: Int
 
 foreign import unsafeF1 :: Foreign -> MidiEvent
 
+parseMidi :: forall e. Eff (dom :: DOM, midi :: MidiPlayer.MIDI, vexFlow :: VEXFLOW | e) (Array Foreign) -> Eff (dom :: DOM, vexFlow :: VEXFLOW, midi :: MidiPlayer.MIDI | e) Unit
+parseMidi dat = do
+  midiObjects  <- dat
+  ticksPerBeat <- MidiPlayer.getTicksPerBeat
+  let sortedData :: Array MidiEvent
+      sortedData = map unsafeF1 midiObjects
+      numerator  :: Int
+      numerator  = getNumerator $ toList sortedData
+      midiNotes        :: Array MidiNote
+      midiNotes        = toUnfoldable $ Data.List.filter (\x -> x.noteNumber > 0) $ map (quantizeNote ticksPerBeat 0.0) $ calculateDuration $ midiEventWriter $ filterNotes $ toList sortedData
+      measuredMidi = toArray $ map (\x -> Data.List.concat <<< setTies ticksPerBeat 3.0 0.0 Nil $ x)$ divideIntoMeasures ticksPerBeat 3 0.0 Nil $ Data.List.filter (\x -> x.noteNumber > 0) $ toList midiNotes
+      indexedTies :: Array (Array (Int))
+      indexedTies = toArray $ map justToIndex $ map findStartingTie $ map (\x -> Data.List.concat <<< setTies ticksPerBeat 3.0 0.0 Nil $ x)$ divideIntoMeasures ticksPerBeat 3 0.0 Nil $ Data.List.filter (\x -> x.noteNumber > 0) $ toList midiNotes
+      toVexFlow = map (\x -> [map (midiNoteToVexFlowNote ticksPerBeat) x]) measuredMidi
+  renderNotation toVexFlow indexedTies
+
+toArray :: forall a. List (List a) -> Array (Array a)  
+toArray lst = toUnfoldable $ map (\x -> toUnfoldable x) lst
+
 -- DISCUSS USING PARTIAL
 fromRight :: forall a b. Either a b -> b
 fromRight (Right a) = a
@@ -28,7 +50,6 @@ fromRight (Right a) = a
 midiNoteToVexFlowNote :: Number -> MidiNote -> VexNote
 midiNoteToVexFlowNote ticksPerBeat x = { note     : [midiNoteToVexTone x.noteNumber]
                                        , duration : deltaTimetoDuration ticksPerBeat x.deltaTime}
-
 
 midiNoteToVexTone :: Int -> VexTone
 midiNoteToVexTone midiNote = { pitch      : fst $ midiNoteToPartialVexFlowNote $ mod midiNote 12
@@ -141,3 +162,37 @@ quantizeNote ticksPerBeat acc event | event.deltaTime < (acc * ticksPerBeat / 4.
 quantizeNote ticksPerBeat acc event | event.deltaTime > (acc * ticksPerBeat / 4.0) && event.deltaTime < (acc * (ticksPerBeat / 4.0) + (ticksPerBeat / 8.0)) = event {deltaTime = acc * (ticksPerBeat / 4.0)}
 quantizeNote ticksPerBeat acc event | event.deltaTime > (acc * ticksPerBeat / 4.0) && event.deltaTime > (acc * (ticksPerBeat / 4.0) + (ticksPerBeat / 8.0)) = quantizeNote ticksPerBeat (acc + 1.0) event
 quantizeNote ticksPerBeat acc event                                                                                                                         = event
+
+filterNotes :: List MidiEvent -> List MidiEvent
+filterNotes Nil                      = Nil
+filterNotes (Cons y@(NoteOn x) xs)   = Cons y (filterNotes xs)
+filterNotes (Cons y@(NoteOff x) xs)  = Cons y (filterNotes xs)
+filterNotes (Cons x xs)              = filterNotes xs
+
+getNumerator :: List MidiEvent -> Int
+getNumerator (Cons y@(TimeSignature x) xs) = x.numerator
+getNumerator (Cons x xs)                   = getNumerator xs
+
+getDeltaTime :: List MidiEvent -> List Number
+getDeltaTime Nil                     = Nil
+getDeltaTime (Cons y@(NoteOn x) xs)  = Cons x.deltaTime (getDeltaTime xs)
+getDeltaTime (Cons y@(NoteOff x) xs) = Cons x.deltaTime (getDeltaTime xs)
+getDeltaTime (Cons x xs)             = getDeltaTime xs
+
+separateStaff :: List MidiEvent -> List MidiEvent
+separateStaff Nil                      = Nil
+separateStaff (Cons y@(NoteOn x) xs)  | x.noteNumber > 61 = Cons y (separateStaff xs)
+separateStaff (Cons y@(NoteOff x) xs) | x.noteNumber > 61 = Cons y (separateStaff xs)
+separateStaff (Cons x xs)                                 = separateStaff xs
+
+findStartingTie :: List MidiNote -> List (Maybe Int)
+findStartingTie Nil = Nil
+findStartingTie midiNotes@(Cons x xs) = mapWithIndex (\x n -> if x.hasFirstTie == true then Just n else Nothing) midiNotes
+
+justToIndex :: List (Maybe Int) -> List Int
+justToIndex Nil = Nil
+justToIndex (Cons x xs) | x == Nothing = (justToIndex xs)
+justToIndex (Cons x xs) = Cons (fromJust x) (justToIndex xs)
+
+fromJust :: forall a. Maybe a -> a
+fromJust (Just x) = x
