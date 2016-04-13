@@ -3,8 +3,6 @@
 
 module.exports = {
 
-    clef:  "treble",
-
     createCanvas: (function(div) {
     	return function(){
     	    return document.getElementById(div);
@@ -80,7 +78,12 @@ module.exports = {
     	    return function() {
     		return voices.map(function(voice){
     		    return voice.map(function(note){
-    			return (new Vex.Flow.StaveNote({ keys: note.pitch, duration: note.duration}));
+			if (note.duration.indexOf("d") > 0) {
+			    return (new Vex.Flow.StaveNote({ keys: note.pitch, duration: note.duration})).addDotToAll();
+			}
+			else {
+    			    return (new Vex.Flow.StaveNote({ keys: note.pitch, duration: note.duration}));
+			}
 			
     		    });
     		});
@@ -115,10 +118,27 @@ module.exports = {
     },
 
     addBeams: function(voices){
-	return function(){
-	    return voices.map(function(voice){
-		return new Vex.Flow.Beam(voice);
-	    	});
+	return function(indices) {
+	    return function() {
+		return voices.map(function(voice){
+		    return indices.map(function(index){
+			if (index.length > 1) {
+				console.log(voice);
+				console.log(index);
+				var start = index[0];
+				var end = index[index.length - 1] + 1;
+				console.log(start);
+				console.log(end);
+				var group = voice.slice(start, end);
+				console.log(group);
+				var kip = new Vex.Flow.Beam(group);
+				console.log(kip);
+				console.log("mauw");
+				return kip;
+			    };
+		    });
+		});
+	    };
 	};
     },
 
@@ -177,11 +197,16 @@ module.exports = {
 	};
     },
 
-    drawBeams: function(beams) {
+    drawBeams: function(voices) {
 	return function(ctx){
 	    return function(){
-		beams.map(function(beam){
-		    beam.setContext(ctx).draw();
+		console.log(voices);
+		voices.map(function(voice){
+		    voice.map(function(v) {
+			if (v != undefined) {
+			    v.setContext(ctx).draw();
+			}
+		    });
 		});
 	    };
 	};
