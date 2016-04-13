@@ -12,4 +12,4 @@ main = do
   MidiPlayer.loadPlugin { soundfontUrl: "bower_components/midi/examples/soundfont/"
                         , instrument:   "acoustic_grand_piano"
                         }
-    (const (parseMidi MidiPlayer.getData3))
+    (const (parseMidi MidiPlayer.getData))
