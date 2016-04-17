@@ -23,9 +23,15 @@ type DeltaTime = Number
 
 foreign import unsafeF1 :: Foreign -> MidiEvent
 
-renderMidi :: forall e. Canvas -> Array Foreign -> Eff (vexFlow :: VEXFLOW, midi :: MIDI | e) Unit
-renderMidi canvas midiData = do
-  ticksPerBeat  <- getTicksPerBeat
+type VexFlowResult = {
+  vexFlowNotes :: VexFlowMusic
+, vexNotes     :: VexMusic
+, indexedTies  :: Array (Array TieIndex)
+, indexedBeams :: Array (Array (Array BeamIndex))
+}
+
+renderMidiPuurJwt :: Array Foreign -> Number -> VexFlowResult
+renderMidiPuurJwt midiData ticksPerBeat = do
   let safeData  = toList $ map unsafeF1 midiData
       numerator = getNumerator safeData
       midiNotes = filter (\x -> x.noteNumber > 0)
@@ -42,7 +48,14 @@ renderMidi canvas midiData = do
       indexedBeams = toUnfoldable <<< map (toArray <<< beamsIndex Nil) $ map (eighthsIndex ticksPerBeat 0) measuredMidi
       vexFlowNotes = map (\x -> [map (midiNoteToVexFlowNote ticksPerBeat) x]) $ toArray measuredMidi
       vexNotes     = map (\x -> [map (midiNoteToVexNote ticksPerBeat) x]) $ toArray measuredMidi
-  renderNotation canvas vexFlowNotes vexNotes indexedTies indexedBeams
+  { vexFlowNotes, vexNotes, indexedTies, indexedBeams }
+
+-- TODO glue, eliminate
+renderMidi :: forall e. Canvas -> Array Foreign -> Eff (vexFlow :: VEXFLOW, midi :: MIDI | e) Unit
+renderMidi canvas d = do
+  ticksPerBeat <- getTicksPerBeat
+  let x = renderMidiPuurJwt d ticksPerBeat
+  renderNotation canvas x.vexFlowNotes x.vexNotes x.indexedTies x.indexedBeams
 
 -- TODO expliciete recursie wegwerken (fold ofzo)
 --FIX ALL FOR NOTEOFFS/RESTS
