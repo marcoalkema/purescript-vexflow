@@ -16,8 +16,8 @@ foreign import data VexFlow       :: *
 foreign import data CANVAS        :: !
 foreign import data Canvas        :: *                    
 
-foreign import createCanvas        :: forall e. String        -> Eff (vexFlow :: VEXFLOW | e) VexFlow
-foreign import createRenderer      :: forall e. VexFlow       -> Eff (vexFlow :: VEXFLOW | e) VexFlow
+foreign import createCanvas        :: forall e. String        -> Eff (vexFlow :: VEXFLOW | e) Canvas
+foreign import createRenderer      :: forall e. Canvas        -> Eff (vexFlow :: VEXFLOW | e) VexFlow
 foreign import createCtx           :: forall e. VexFlow       -> Eff (vexFlow :: VEXFLOW | e) VexFlow
 foreign import createNotes         :: forall e. VexFlowBar    -> Eff (vexFlow :: VEXFLOW | e) VexFlow
 foreign import createStave         :: forall e. Int           -> Number    -> Number  -> Eff (vexFlow :: VEXFLOW | e) VexFlow
@@ -29,23 +29,36 @@ foreign import addAccidentals      :: forall e. VexFlow       -> AccidentalBar  
 foreign import drawStave           :: forall e. VexFlow       -> VexFlow                            -> Eff (vexFlow :: VEXFLOW | e) Unit
 foreign import createKeySignature  :: forall e. KeySignature  -> VexFlow                            -> Eff (vexFlow :: VEXFLOW | e) VexFlow
 foreign import createTimeSignature :: forall e. TimeSignature -> VexFlow                            -> Eff (vexFlow :: VEXFLOW | e) VexFlow
-foreign import addTies             :: forall e. VexFlow       -> Array Int                          -> Eff (vexFlow :: VEXFLOW | e) VexFlow
-foreign import addBeams            :: forall e. VexFlow       -> Array (Array Int)                  -> Eff (vexFlow :: VEXFLOW | e) VexFlow
+foreign import addTies             :: forall e. VexFlow       -> Array TieIndex                     -> Eff (vexFlow :: VEXFLOW | e) VexFlow
+foreign import addBeams            :: forall e. VexFlow       -> Array (Array BeamIndex)            -> Eff (vexFlow :: VEXFLOW | e) VexFlow
 foreign import addNotesToVoice     :: forall e. VexFlow       -> (Eff (vexFlow :: VEXFLOW) VexFlow) -> Eff (vexFlow :: VEXFLOW | e) VexFlow
 foreign import drawBeams           :: forall e. VexFlow       -> VexFlow                            -> Eff (vexFlow :: VEXFLOW | e) Unit
 foreign import drawTies            :: forall e. VexFlow       -> VexFlow                            -> Eff (vexFlow :: VEXFLOW | e) Unit
 
 type AccidentalBar   = (Array (Array (Array (Tuple String Int))))
 type AccidentalVoice = Array AccidentalBar
+type TieIndex        = Int
+type BeamIndex       = Int
 
-renderNotation :: forall e. VexFlowMusic -> VexMusic -> Array (Array Int) -> Array (Array (Array Int)) -> Eff (vexFlow :: VEXFLOW, midi :: MidiPlayer.MIDI | e) Unit
+renderNotation :: forall e. VexFlowMusic -> VexMusic -> Array (Array TieIndex) -> Array (Array (Array BeamIndex)) -> Eff (vexFlow :: VEXFLOW, midi :: MidiPlayer.MIDI | e) Unit
 renderNotation notes vexNotes indexedTies indexedBeams = do
   canvas   <- createCanvas "notationCanvas"
   renderer <- createRenderer canvas
   drawPrimaryStave renderer "treble" "G"
   drawNotation notes (musicWithIndexedAccidentals vexNotes) renderer indexedTies indexedBeams
 
-drawNotation :: forall e. VexFlowMusic -> AccidentalVoice -> VexFlow -> Array (Array Int) -> Array (Array (Array Int)) -> Eff (vexFlow :: VEXFLOW | e) Unit
+renderNotation' :: forall e. Canvas -> VexFlowMusic -> VexMusic -> Array (Array TieIndex) -> Array (Array (Array BeamIndex)) -> Eff (vexFlow :: VEXFLOW, midi :: MidiPlayer.MIDI | e) Unit
+renderNotation' canvas notes vexNotes indexedTies indexedBeams = do
+  -- canvas   <- createCanvas canvasId
+  renderer <- createRenderer canvas
+  drawPrimaryStave renderer "treble" "G"
+  drawNotation notes (musicWithIndexedAccidentals vexNotes) renderer indexedTies indexedBeams
+
+-- renderNotation = do
+--   canvas <- createCanvas "notationCanvas"
+--   renderNotation'
+
+drawNotation :: forall e. VexFlowMusic -> AccidentalVoice -> VexFlow -> Array (Array TieIndex) -> Array (Array (Array BeamIndex)) -> Eff (vexFlow :: VEXFLOW | e) Unit
 drawNotation music accidentals renderer indexedTies indexedBeams = do
   let stave         = renderStaff renderer 280.0 1.0
       voices        = zipWith renderVoice music accidentals
@@ -53,7 +66,7 @@ drawNotation music accidentals renderer indexedTies indexedBeams = do
   traverse_ (\(Tuple i voice) -> stave i $ voice (fromJust $ index indexedTies i) (fromJust $ index indexedBeams i)) indexedVoices
 
 -- createNewVoice with denominator & numerator
-renderVoice :: forall e. VexFlowBar -> AccidentalBar -> Array Int -> Array (Array Int) -> VexFlow -> VexFlow -> Eff (vexFlow :: VEXFLOW | e) Unit
+renderVoice :: forall e. VexFlowBar -> AccidentalBar -> Array TieIndex -> Array (Array BeamIndex) -> VexFlow -> VexFlow -> Eff (vexFlow :: VEXFLOW | e) Unit
 renderVoice bar accidentals indexedTies indexedBeams context stave = do
   notes            <- createNotes bar
   addedAccidentals <- addAccidentals notes accidentals

@@ -8,8 +8,9 @@ import MidiToVexFlow
 
 main :: forall e. Eff (midi :: MidiPlayer.MIDI, vexFlow :: VEXFLOW | e) Unit
 main = do
-  MidiPlayer.loadFile "bower_components/purescript-midiplayer/midi/bach10.mid"
+  -- canvas <- createCanvas "notationCanvas"
+  MidiPlayer.loadFile "bower_components/purescript-midiplayer/midi/test2.mid"
   MidiPlayer.loadPlugin { soundfontUrl: "bower_components/midi/examples/soundfont/"
                         , instrument:   "acoustic_grand_piano"
                         }
-    (const (parseMidi MidiPlayer.getData))
+    (const (MidiPlayer.getData >>= parseMidi))

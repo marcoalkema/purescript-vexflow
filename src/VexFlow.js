@@ -123,17 +123,10 @@ module.exports = {
 		return voices.map(function(voice){
 		    return indices.map(function(index){
 			if (index.length > 1) {
-				console.log(voice);
-				console.log(index);
 				var start = index[0];
 				var end = index[index.length - 1] + 1;
-				console.log(start);
-				console.log(end);
 				var group = voice.slice(start, end);
-				console.log(group);
 				var kip = new Vex.Flow.Beam(group);
-				console.log(kip);
-				console.log("mauw");
 				return kip;
 			    };
 		    });
