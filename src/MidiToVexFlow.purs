@@ -23,10 +23,8 @@ type DeltaTime = Number
 
 foreign import unsafeF1 :: Foreign -> MidiEvent
 
--- parseMidi :: forall e. Canvas -> Array Foreign -> Eff (vexFlow :: VEXFLOW, midi :: MIDI | e) Unit
--- parseMidi canvas midiData = do
-parseMidi :: forall e. Array Foreign -> Eff (vexFlow :: VEXFLOW, midi :: MIDI | e) Unit
-parseMidi midiData = do
+renderMidi :: forall e. Canvas -> Array Foreign -> Eff (vexFlow :: VEXFLOW, midi :: MIDI | e) Unit
+renderMidi canvas midiData = do
   ticksPerBeat  <- getTicksPerBeat
   let safeData  = toList $ map unsafeF1 midiData
       numerator = getNumerator safeData
@@ -44,8 +42,7 @@ parseMidi midiData = do
       indexedBeams = toUnfoldable <<< map (toArray <<< beamsIndex Nil) $ map (eighthsIndex ticksPerBeat 0) measuredMidi
       vexFlowNotes = map (\x -> [map (midiNoteToVexFlowNote ticksPerBeat) x]) $ toArray measuredMidi
       vexNotes     = map (\x -> [map (midiNoteToVexNote ticksPerBeat) x]) $ toArray measuredMidi
-  -- renderNotation canvas vexFlowNotes vexNotes indexedTies indexedBeams
-  renderNotation vexFlowNotes vexNotes indexedTies indexedBeams
+  renderNotation canvas vexFlowNotes vexNotes indexedTies indexedBeams
 
 -- TODO expliciete recursie wegwerken (fold ofzo)
 --FIX ALL FOR NOTEOFFS/RESTS

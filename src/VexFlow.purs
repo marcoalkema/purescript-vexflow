@@ -40,23 +40,11 @@ type AccidentalVoice = Array AccidentalBar
 type TieIndex        = Int
 type BeamIndex       = Int
 
-renderNotation :: forall e. VexFlowMusic -> VexMusic -> Array (Array TieIndex) -> Array (Array (Array BeamIndex)) -> Eff (vexFlow :: VEXFLOW, midi :: MidiPlayer.MIDI | e) Unit
-renderNotation notes vexNotes indexedTies indexedBeams = do
-  canvas   <- createCanvas "notationCanvas"
+renderNotation :: forall e. Canvas -> VexFlowMusic -> VexMusic -> Array (Array TieIndex) -> Array (Array (Array BeamIndex)) -> Eff (vexFlow :: VEXFLOW, midi :: MidiPlayer.MIDI | e) Unit
+renderNotation canvas notes vexNotes indexedTies indexedBeams = do
   renderer <- createRenderer canvas
   drawPrimaryStave renderer "treble" "G"
   drawNotation notes (musicWithIndexedAccidentals vexNotes) renderer indexedTies indexedBeams
-
-renderNotation' :: forall e. Canvas -> VexFlowMusic -> VexMusic -> Array (Array TieIndex) -> Array (Array (Array BeamIndex)) -> Eff (vexFlow :: VEXFLOW, midi :: MidiPlayer.MIDI | e) Unit
-renderNotation' canvas notes vexNotes indexedTies indexedBeams = do
-  -- canvas   <- createCanvas canvasId
-  renderer <- createRenderer canvas
-  drawPrimaryStave renderer "treble" "G"
-  drawNotation notes (musicWithIndexedAccidentals vexNotes) renderer indexedTies indexedBeams
-
--- renderNotation = do
---   canvas <- createCanvas "notationCanvas"
---   renderNotation'
 
 drawNotation :: forall e. VexFlowMusic -> AccidentalVoice -> VexFlow -> Array (Array TieIndex) -> Array (Array (Array BeamIndex)) -> Eff (vexFlow :: VEXFLOW | e) Unit
 drawNotation music accidentals renderer indexedTies indexedBeams = do
