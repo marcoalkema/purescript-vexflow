@@ -2,29 +2,32 @@ module VexFlow where
 
 import Prelude
 import Control.Monad.Eff (Eff)
+import Control.Monad.Eff.Console
 import Music (TimeSignature, KeySignature, Clef)
 import VexMusic
 import Data.Tuple (Tuple)
 import Data.Maybe
 import Data.Tuple
+import MidiPlayer
 import Data.List
+import Data.Int (toNumber)
 import Data.Array (zipWith, index)
 import Data.Foldable (traverse_)
 
-foreign import data VEXFLOW       :: !
-foreign import data VexFlow       :: *
-foreign import data CANVAS        :: !
-foreign import data Canvas        :: *                    
+foreign import data VEXFLOW :: !
+foreign import data VexFlow :: *
+foreign import data CANVAS  :: !
+foreign import data Canvas  :: *
 
 foreign import createCanvas        :: forall e. String        -> Eff (vexFlow :: VEXFLOW | e) Canvas
 foreign import createRenderer      :: forall e. Canvas        -> Eff (vexFlow :: VEXFLOW | e) VexFlow
 foreign import createCtx           :: forall e. VexFlow       -> Eff (vexFlow :: VEXFLOW | e) VexFlow
 foreign import createNotes         :: forall e. VexFlowBar    -> Eff (vexFlow :: VEXFLOW | e) VexFlow
-foreign import createStave         :: forall e. Int           -> Number    -> Number  -> Eff (vexFlow :: VEXFLOW | e) VexFlow
+foreign import createStave         :: forall e. Int           -> Int       -> Number  -> Eff (vexFlow :: VEXFLOW | e) VexFlow
 foreign import drawKeyStave        :: forall e. VexFlow       -> Clef      -> VexFlow -> Eff (vexFlow :: VEXFLOW | e) Unit
 foreign import drawVoice           :: forall e. VexFlow       -> VexFlow   -> VexFlow -> Eff (vexFlow :: VEXFLOW | e) Unit
 foreign import formatter           :: forall e. VexFlow       -> Number                             -> Eff (vexFlow :: VEXFLOW | e) Unit
-foreign import createNewVoice      :: forall e. Number        -> Number                             -> Eff (vexFlow :: VEXFLOW | e) VexFlow
+foreign import createNewVoice      :: forall e. Int           -> Number                             -> Eff (vexFlow :: VEXFLOW | e) VexFlow
 foreign import addAccidentals      :: forall e. VexFlow       -> AccidentalBar                      -> Eff (vexFlow :: VEXFLOW | e) VexFlow
 foreign import drawStave           :: forall e. VexFlow       -> VexFlow                            -> Eff (vexFlow :: VEXFLOW | e) Unit
 foreign import createKeySignature  :: forall e. KeySignature  -> VexFlow                            -> Eff (vexFlow :: VEXFLOW | e) VexFlow
@@ -40,47 +43,47 @@ type AccidentalVoice = Array AccidentalBar
 type TieIndex        = Int
 type BeamIndex       = Int
 
-renderNotation :: forall e. Canvas -> VexFlowMusic -> VexMusic -> Array (Array TieIndex) -> Array (Array (Array BeamIndex)) -> Eff (vexFlow :: VEXFLOW, midi :: MidiPlayer.MIDI | e) Unit
-renderNotation canvas notes vexNotes indexedTies indexedBeams = do
+renderNotation :: forall e. Canvas -> VexFlowMusic -> VexMusic -> Array (Array TieIndex) -> Array (Array (Array BeamIndex)) -> Int -> Eff (vexFlow :: VEXFLOW, midi :: MidiPlayer.MIDI | e) Unit
+renderNotation canvas notes vexNotes indexedTies indexedBeams num = do
   renderer <- createRenderer canvas
-  drawPrimaryStave renderer "treble" "G"
-  drawNotation notes (musicWithIndexedAccidentals vexNotes) renderer indexedTies indexedBeams
+  drawPrimaryStave renderer "treble" "C" num
+  drawNotation num notes (musicWithIndexedAccidentals vexNotes) renderer indexedTies indexedBeams
 
-drawNotation :: forall e. VexFlowMusic -> AccidentalVoice -> VexFlow -> Array (Array TieIndex) -> Array (Array (Array BeamIndex)) -> Eff (vexFlow :: VEXFLOW | e) Unit
-drawNotation music accidentals renderer indexedTies indexedBeams = do
-  let stave         = renderStaff renderer 280.0 1.0
-      voices        = zipWith renderVoice music accidentals
+drawNotation :: forall e. Int -> VexFlowMusic -> AccidentalVoice -> VexFlow -> Array (Array TieIndex) -> Array (Array (Array BeamIndex)) -> Eff (vexFlow :: VEXFLOW | e) Unit
+drawNotation num music accidentals renderer indexedTies indexedBeams = do
+  let stave         = renderStaff renderer 280.0
+      voices        = zipWith (renderVoice num) music accidentals
       indexedVoices = addIndexToArray voices
   traverse_ (\(Tuple i voice) -> stave i $ voice (fromJust $ index indexedTies i) (fromJust $ index indexedBeams i)) indexedVoices
 
 -- createNewVoice with denominator & numerator
-renderVoice :: forall e. VexFlowBar -> AccidentalBar -> Array TieIndex -> Array (Array BeamIndex) -> VexFlow -> VexFlow -> Eff (vexFlow :: VEXFLOW | e) Unit
-renderVoice bar accidentals indexedTies indexedBeams context stave = do
+renderVoice :: forall e. Int -> VexFlowBar -> AccidentalBar -> Array TieIndex -> Array (Array BeamIndex) -> VexFlow -> VexFlow -> Eff (vexFlow :: VEXFLOW | e) Unit
+renderVoice num bar accidentals indexedTies indexedBeams context stave = do
   notes            <- createNotes bar
   addedAccidentals <- addAccidentals notes accidentals
   tiedNotes        <- addTies addedAccidentals indexedTies
   beamedNotes      <- addBeams addedAccidentals indexedBeams
-  voicing          <- addNotesToVoice addedAccidentals (createNewVoice 4.0 4.0)
+  voicing          <- addNotesToVoice addedAccidentals (createNewVoice num 4.0)
   formatter voicing (260.0)
   drawVoice context stave voicing
   drawTies tiedNotes context
   drawBeams beamedNotes context
 
 -- createStaff: Break system per 4 bars
-renderStaff :: forall e. VexFlow -> Number -> Number -> Int -> (VexFlow -> VexFlow -> (Eff (vexFlow :: VEXFLOW | e) Unit)) -> Eff (vexFlow :: VEXFLOW | e) Unit
-renderStaff renderer w y x voice = do
+renderStaff :: forall e. VexFlow -> Number -> Int -> (VexFlow -> VexFlow -> (Eff (vexFlow :: VEXFLOW | e) Unit)) -> Eff (vexFlow :: VEXFLOW | e) Unit
+renderStaff renderer w i voice = do
   ctx   <- createCtx renderer
-  stave <- createStave (80 + x * 280) y w
+  stave <- createStave (80 + (mod i 4) * 280) (0 + (50 * (i - (mod i 4)))) w
   drawStave stave ctx
   voice ctx stave
 
 -- createTimeSignature with numerator
-drawPrimaryStave :: forall e. VexFlow -> Clef -> KeySignature -> Eff (vexFlow :: VEXFLOW | e) Unit
-drawPrimaryStave renderer clef key = do
+drawPrimaryStave :: forall e. VexFlow -> Clef -> KeySignature -> Int -> Eff (vexFlow :: VEXFLOW | e) Unit
+drawPrimaryStave renderer clef key num = do
     ctx   <- createCtx renderer
-    stave <- createStave 1 1.0 80.0
+    stave <- createStave 1 1 80.0
     createKeySignature key stave
-    createTimeSignature "4/4" stave
+    createTimeSignature ((show num) ++ "/4") stave
     drawKeyStave stave clef ctx
 
 -- drawTrebleStave :: Number -> Vx.VexFlow -> KeySignature -> Vx.VexFlowEff

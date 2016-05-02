@@ -21,9 +21,10 @@
     "purescript-foldable-traversable": "^0.4.2",
     "purescript-math": "^0.2.0",
     "purescript-foreign": "^0.7.2",
-    "purescript-midiplayer": "https://github.com/marcoalkema/purescript-midiplayer.git#8062bc1b0bd3795a9f16a2275d539878601401c2",
+    "purescript-midiplayer": "https://github.com/marcoalkema/purescript-midiplayer.git#0528d9e6313604a0758af507d8ad50f652f6a06e",
     "purescript-partial": "^1.1.0",
     "purescript-prelude": "^0.1.4",
-    "purescript-transformers": "^0.8.4"
+    "purescript-transformers": "^0.8.4",
+    "purescript-pux": "^3.1.0"
   }
 }

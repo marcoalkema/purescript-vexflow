@@ -9,16 +9,18 @@ import Data.Foreign
 import Data.Tuple
 import MidiJsTypes
 import MidiPlayer
+import MidiJS as MidiPlayer2
 import VexMusic
 import Data.Foldable (foldl)
 import Data.Maybe
 import VexFlow
+import Data.Int
 import Data.List
 import Data.List (concat, filter)
 import Quantizer
 
 type TicksPerBeat = Number
-type Numerator = Number
+type Numerator = Int
 type DeltaTime = Number
 
 foreign import unsafeF1 :: Foreign -> MidiEvent
@@ -28,8 +30,9 @@ type VexFlowResult = {
 , vexNotes     :: VexMusic
 , indexedTies  :: Array (Array TieIndex)
 , indexedBeams :: Array (Array (Array BeamIndex))
+, numerator    :: Int
 }
-
+--kip
 renderMidiPuurJwt :: Array Foreign -> Number -> VexFlowResult
 renderMidiPuurJwt midiData ticksPerBeat = do
   let safeData  = toList $ map unsafeF1 midiData
@@ -40,25 +43,30 @@ renderMidiPuurJwt midiData ticksPerBeat = do
                   <<< map (\midiObject -> Tuple midiObject false) -- midiEventWriter
                   <<< filter metsj
                   $ toList safeData
-      measuredMidi = map ((concat <<< setDots ticksPerBeat 4.0 0.0 Nil) <<<
-                          (concat <<< setTies ticksPerBeat 4.0 0.0 Nil))
-                     $ divideIntoMeasures ticksPerBeat 4.0 0.0 Nil midiNotes
-      indexedTies = toArray $ map (maybeToInt <<< findStartingTie) measuredMidi
-      indexedBeams :: Array (Array (Array Int))
-      indexedBeams = toUnfoldable <<< map (toArray <<< beamsIndex Nil) $ map (eighthsIndex ticksPerBeat 0) measuredMidi
+      measuredMidi = map ((concat <<< setTies ticksPerBeat numerator 0.0 Nil) <<<
+                          (concat <<< setDots ticksPerBeat numerator 0.0 Nil))
+                     $ divideIntoMeasures ticksPerBeat numerator 0.0 Nil midiNotes
+  let foo :: Array (Array (Tuple Number MidiNote))
+      foo = toArray $ map (position' ticksPerBeat) measuredMidi
+  let indexedTies = toArray $ map (maybeToInt <<< findStartingTie) measuredMidi
+      indexedBeams :: Array (Array (Array BeamIndex))
+      indexedBeams = toUnfoldable $ map ((toArray <<< beamsIndex ticksPerBeat Nil) <<< (eighthsIndex' ticksPerBeat)) measuredMidi
       vexFlowNotes = map (\x -> [map (midiNoteToVexFlowNote ticksPerBeat) x]) $ toArray measuredMidi
       vexNotes     = map (\x -> [map (midiNoteToVexNote ticksPerBeat) x]) $ toArray measuredMidi
-  { vexFlowNotes, vexNotes, indexedTies, indexedBeams }
+  { vexFlowNotes, vexNotes, indexedTies, indexedBeams, numerator}
 
 -- TODO glue, eliminate
-renderMidi :: forall e. Canvas -> Array Foreign -> Eff (vexFlow :: VEXFLOW, midi :: MIDI | e) Unit
+-- renderMidi :: forall e. Canvas -> Array Foreign -> Eff (vexFlow :: VEXFLOW, midi :: MIDI | e) Unit
 renderMidi canvas d = do
   ticksPerBeat <- getTicksPerBeat
   let x = renderMidiPuurJwt d ticksPerBeat
-  renderNotation canvas x.vexFlowNotes x.vexNotes x.indexedTies x.indexedBeams
+  renderNotation canvas x.vexFlowNotes x.vexNotes x.indexedTies x.indexedBeams x.numerator
 
 -- TODO expliciete recursie wegwerken (fold ofzo)
 --FIX ALL FOR NOTEOFFS/RESTS
+-- foo :: TicksPerBeat -> Numerator -> DeltaTime -> List MidiNote -> List (List MidiNote) -> List (List MidiNote)
+-- foo tpb num accDt accNotes lst = foldl
+
 divideIntoMeasures :: TicksPerBeat -> Numerator -> DeltaTime -> List MidiNote -> List MidiNote -> List (List MidiNote)
 divideIntoMeasures ticksPerBeat numerator accumulatedDeltaTime accNotes Nil = Nil
 divideIntoMeasures ticksPerBeat numerator accumulatedDeltaTime accNotes (Cons note notes) =
@@ -67,13 +75,15 @@ divideIntoMeasures ticksPerBeat numerator accumulatedDeltaTime accNotes (Cons no
   else if dt == measure then
          (Cons (snoc accNotes note) (divideIntoMeasures ticksPerBeat numerator 0.0 Nil notes))
   else
-         (Cons (snoc accNotes (setFirstTie $ insertNewDeltaTime lastNoteDeltaTime note)))
-         (divideIntoMeasures ticksPerBeat numerator 0.0 Nil (Cons (setEndingTie $ insertNewDeltaTime newFirstNoteDeltaTime note) notes))
+         (Cons (snoc accNotes (createStartTie note)))
+         (divideIntoMeasures ticksPerBeat numerator 0.0 Nil (Cons (createEndingTie note) notes))
   where
-    measure               = ticksPerBeat * numerator
+    measure               = ticksPerBeat * (toNumber numerator)
     lastNoteDeltaTime     = measure - accumulatedDeltaTime
     newFirstNoteDeltaTime = note.deltaTime - lastNoteDeltaTime
     dt                    = accumulatedDeltaTime + note.deltaTime
+    createStartTie        = setFirstTie <<< insertNewDeltaTime lastNoteDeltaTime
+    createEndingTie       = setEndingTie <<< insertNewDeltaTime newFirstNoteDeltaTime 
 
 -- duplicatie elimineren mbv if-then ipv guards
 
@@ -82,22 +92,25 @@ setTies ticksPerBeat numerator accumulatedDeltaTime accNotes Nil = Cons accNotes
 setTies ticksPerBeat numerator accumulatedDeltaTime accNotes (Cons note notes) =
   if dt < ticksPerBeat then
          setTies ticksPerBeat numerator dt (snoc accNotes note) notes
-  else if dt == ticksPerBeat || (dt > ticksPerBeat && note.hasDot) then
-         Cons (snoc accNotes note) (setTies ticksPerBeat numerator (if accumulatedDeltaTime == 0.0 then quarterNote else 0.0) Nil notes)
+  else if dt == ticksPerBeat then
+         Cons (snoc accNotes note) (setTies ticksPerBeat numerator 0.0 Nil notes)
+  else if dt == 2.0 * ticksPerBeat && (accumulatedDeltaTime == 0.0 || accumulatedDeltaTime == 960.0 ) then
+         Cons (snoc accNotes note) (setTies ticksPerBeat numerator (mod ((ticksPerBeat * 4.0) - accumulatedDeltaTime) (ticksPerBeat * 4.0))  Nil notes)
+  else if dt == 4.0 * ticksPerBeat then
+         Cons (snoc accNotes note) (setTies ticksPerBeat numerator 0.0 Nil notes)
+           else if dt > ticksPerBeat && note.hasDot then
+         Cons (snoc accNotes note) (setTies ticksPerBeat numerator (if accumulatedDeltaTime == 0.0 then resolution else 0.0) Nil notes)
   else
          Cons (snoc accNotes (setFirstTie $ insertNewDeltaTime lastNoteDeltaTime note)) (setTies ticksPerBeat numerator 0.0 Nil (Cons (setEndingTie $ insertNewDeltaTime newFirstNoteDeltaTime note) notes))
   where
     lastNoteDeltaTime     = ticksPerBeat - accumulatedDeltaTime
     newFirstNoteDeltaTime = note.deltaTime - lastNoteDeltaTime
     dt                    = accumulatedDeltaTime + note.deltaTime
-    quarterNote           = 120.0
+    resolution            = ticksPerBeat / 4.0
 
 insertNewDeltaTime :: Number -> MidiNote -> MidiNote
-insertNewDeltaTime n midiNote = { noteNumber   : midiNote.noteNumber
-                                , deltaTime    : n
-                                , hasFirstTie  : false
-                                , hasEndingTie : false
-                                , hasDot       : false }
+insertNewDeltaTime n midiNote = midiNote { noteNumber   = midiNote.noteNumber
+                                         , deltaTime    = n }
 
 -- TODO underscrores jwt
 setDots :: TicksPerBeat -> Numerator -> DeltaTime -> List MidiNote -> List MidiNote -> List (List MidiNote)
@@ -108,17 +121,30 @@ setDots ticksPerBeat numerator accumulatedDeltaTime accXs (Cons x xs) | (accumul
                                                                         (accumulatedDeltaTime == (ticksPerBeat / 2.0) * 5.0 && x.deltaTime == ticksPerBeat * 1.5) = setDots ticksPerBeat numerator (x.deltaTime + accumulatedDeltaTime) (snoc accXs $ setDot x) xs
 setDots ticksPerBeat numerator accumulatedDeltaTime accXs (Cons x xs) = setDots ticksPerBeat numerator (x.deltaTime + accumulatedDeltaTime) (snoc accXs x) xs
 
--- TODO filter ipv expl recursie
-eighthsIndex :: TicksPerBeat -> Int -> List MidiNote -> List Int
-eighthsIndex ticksPerBeat i Nil = Nil
-eighthsIndex ticksPerBeat i (Cons x xs) | x.deltaTime >  ticksPerBeat / 2.0 =          eighthsIndex ticksPerBeat (i + 1) xs
-eighthsIndex ticksPerBeat i (Cons x xs) | x.deltaTime <= ticksPerBeat / 2.0 = Cons i $ eighthsIndex ticksPerBeat (i + 1) xs
+eighthsIndex' :: TicksPerBeat -> List MidiNote -> List (Tuple Int Number)
+eighthsIndex' ticksPerBeat = map (\(Tuple x (Tuple y z)) -> Tuple x y) <<< filter (\(Tuple _ (Tuple _ note)) -> note.deltaTime <= (ticksPerBeat / 2.0) * 1.5) <<< indexed
+  where
+    indexed :: List MidiNote -> List (Tuple Int (Tuple Number MidiNote))
+    indexed notes = Data.List.Lazy.toUnfoldable <<< Data.List.Lazy.zip (Data.List.Lazy.iterate (_ + 1) 0) <<< Data.List.Lazy.fromFoldable $ position' ticksPerBeat notes
 
-beamsIndex :: List Int -> List Int -> List (List Int)
-beamsIndex accXs Nil                               = Cons accXs          Nil
-beamsIndex accXs (Cons x Nil)                      = Cons (snoc accXs x) Nil
-beamsIndex accXs (Cons x (Cons y ys)) | x /= y - 1 = Cons accXs          (beamsIndex Nil (Cons y ys))
-beamsIndex accXs (Cons x (Cons y ys)) | x == y - 1 = beamsIndex (snoc accXs x) (Cons y ys)
+position' :: Number -> List MidiNote -> List (Tuple Number MidiNote)
+position' ticksPerBeat (Cons x xs) = Cons (Tuple 0.0 x) (position ticksPerBeat 0.0 (Cons x xs))
+
+position :: Number -> Number -> List MidiNote -> List (Tuple Number MidiNote)
+position ticksPerBeat _   Nil                   = Nil
+position ticksPerBeat _   (Cons x Nil)          = Nil
+position ticksPerBeat pos (Cons x (Cons y Nil)) = Cons (Tuple (pos + x.deltaTime) y)  Nil
+position ticksPerBeat pos (Cons x (Cons y ys))  = Cons (Tuple (toNumber (mod (round (x.deltaTime + pos)) (round (ticksPerBeat * 4.0)))) y) (position ticksPerBeat (pos + x.deltaTime) (Cons y ys))
+
+--foldr
+beamsIndex :: Number -> List Int -> List (Tuple Int Number) -> List (List Int)
+beamsIndex _ accXs Nil                               = Cons accXs          Nil
+beamsIndex ticksPerBeat accXs (Cons x Nil)           = Cons (snoc accXs (fst x)) Nil
+beamsIndex ticksPerBeat accXs (Cons x (Cons y ys)) | (snd x) == ((ticksPerBeat / 4.0) * 3.0) = Cons (snoc accXs (fst x)) (beamsIndex ticksPerBeat  Nil (Cons y ys))
+beamsIndex ticksPerBeat accXs (Cons x (Cons y ys)) | (snd x) == ((ticksPerBeat / 4.0) * 11.0) = Cons (snoc accXs (fst x)) (beamsIndex ticksPerBeat  Nil (Cons y ys))
+beamsIndex ticksPerBeat accXs (Cons x (Cons y ys)) | (snd x) == ((ticksPerBeat / 2.0) * 3.0) || (snd x) == ((ticksPerBeat / 4.0) * 7.0) = Cons (snoc accXs (fst x)) (beamsIndex ticksPerBeat  Nil (Cons y ys))
+beamsIndex ticksPerBeat accXs (Cons x (Cons y ys)) | (fst x) /= (fst y) - 1 = Cons accXs (beamsIndex ticksPerBeat  Nil (Cons y ys))
+beamsIndex ticksPerBeat accXs (Cons x (Cons y ys)) | (fst x) == (fst y) - 1 = beamsIndex ticksPerBeat (snoc accXs (fst x)) (Cons y ys)
 
 -- TODO read about purescript's profunctor lenses
 setDot :: MidiNote -> MidiNote

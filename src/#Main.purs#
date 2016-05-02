@@ -16,6 +16,3 @@ main = do
                         , instrument:   "acoustic_grand_piano"
                         }
     (const (MidiPlayer.getData >>= renderMidi canvas))
-
-
---gfgd
