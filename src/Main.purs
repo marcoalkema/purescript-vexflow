@@ -1,5 +1,4 @@
-
-module Main where
+module Vex where
 
 import Prelude (Unit, (>>=), const, bind)
 import Control.Monad.Eff (Eff)
