@@ -5,6 +5,8 @@ import Data.Tuple
 import Data.Array (filter)
 import Music
 
+type MidiNote      = Int
+
 type VexAccidental = String
 type VexPitch      = String
 type VexOctave     = Int
@@ -17,8 +19,6 @@ type VexFlowOctave     = String
 type VexFlowVoice      = Array VexFlowNote
 type VexFlowBar        = Array VexFlowVoice
 type VexFlowMusic      = Array VexFlowBar
-type VexFlowPiano      = { treble :: Array VexFlowBar
-                         , bass   :: Array VexFlowBar}
 
 type VexFlowAccidentalNote  = Array (Tuple VexFlowAccidental Int)
 type VexFlowAccidentalVoice = Array VexFlowAccidentalNote
@@ -92,7 +92,7 @@ deltaTimeToVexFlowDuration ticksPerBeat deltaTime | deltaTime == ticksPerBeat * 
 deltaTimeToVexFlowDuration ticksPerBeat deltaTime | deltaTime == ticksPerBeat * 3.0         = show 1
 deltaTimeToVexFlowDuration ticksPerBeat deltaTime | deltaTime == ticksPerBeat * 4.0         = show 1
 
-midiNoteToPartialVexFlowNote :: Int -> Tuple Pitch Accidental
+midiNoteToPartialVexFlowNote :: Int -> (Tuple Pitch Accidental)
 midiNoteToPartialVexFlowNote 0  = Tuple C Natural
 midiNoteToPartialVexFlowNote 1  = Tuple C Sharp
 midiNoteToPartialVexFlowNote 2  = Tuple D Natural

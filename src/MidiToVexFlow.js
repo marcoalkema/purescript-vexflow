@@ -1,5 +1,5 @@
 // module MidiToVexFlow
-var mjt = require('MidiJsTypes');
+var mjt = require('../MidiJsTypes/index.js');
 
 // MidiEventRec -> MidiEventFoo
 module.exports = {

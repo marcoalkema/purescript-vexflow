@@ -14,12 +14,18 @@ type Clef = String
 type KeySignature = String
 type TimeSignature = String
 
-
 type Note = { pitch      :: Pitch
             , accidental :: Accidental
             , octave     :: Int
             , duration   :: Duration  
             }
+
+cSharp :: Note
+cSharp = { pitch      : C
+         , accidental : Sharp
+         , octave     : 5
+         , duration   : Even Whole
+         }
 
 type ChordNote = { pitch      :: Pitch
                  , accidental :: Accidental
@@ -30,20 +36,9 @@ type Chord = { notes      :: Array ChordNote
              , duration   :: Duration  
              }
 
-cSharp :: Note
-cSharp = { pitch      : C
-      , accidental : Sharp
-      , octave     : 5
-      , duration   : Even Whole
-      }
-
 
 derive instance genericAccidental :: Generic Accidental
 instance eqAccidental :: Eq Accidental where
   eq = gEq
 instance showAccidental :: Show Accidental where
   show = gShow 
-
-
-                   
-

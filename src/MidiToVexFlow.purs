@@ -2,12 +2,14 @@ module MidiToVexFlow where
 
 import Prelude
 import Control.Monad.Eff (Eff)
+import Control.Monad.Aff
 import Control.Monad.Eff.Console (CONSOLE, log)
 import Data.List (List(Nil, Cons), snoc)
 import Data.Either (Either(Right, Left))
 import Data.Foreign
 import Data.Tuple
 import MidiJsTypes
+import MidiJsTypes (MidiNote)
 import MidiPlayer
 import MidiJS as MidiPlayer2
 import VexMusic
@@ -18,12 +20,18 @@ import Data.Int
 import Data.List
 import Data.List (concat, filter)
 import Quantizer
+import Signal
+import ColorNotation
+import Data.Foldable
 
-type TicksPerBeat = Number
-type Numerator = Int
-type DeltaTime = Number
+type TicksPerBeat   = Number
+type Numerator      = Int
+type DeltaTime      = Number
+type UnsafeMidiData = Foreign
+type TicksPerBeat   = Number
+type NoteNumber     = Int
 
-foreign import unsafeF1 :: Foreign -> MidiEvent
+foreign import unsafeF1 :: UnsafeMidiData -> MidiEvent
 
 type VexFlowResult = {
   vexFlowNotes :: VexFlowMusic
@@ -32,35 +40,33 @@ type VexFlowResult = {
 , indexedBeams :: Array (Array (Array BeamIndex))
 , numerator    :: Int
 }
---kip
-renderMidiPuurJwt :: Array Foreign -> Number -> VexFlowResult
-renderMidiPuurJwt midiData ticksPerBeat = do
-  let safeData  = toList $ map unsafeF1 midiData
-      numerator = getNumerator safeData
-      midiNotes = filter (\x -> x.noteNumber > 0)
-                  <<< map (quantizeNote ticksPerBeat 0.0)
-                  <<< calculateDuration
-                  <<< map (\midiObject -> Tuple midiObject false) -- midiEventWriter
-                  <<< filter metsj
-                  $ toList safeData
-      measuredMidi = map ((concat <<< setTies ticksPerBeat numerator 0.0 Nil) <<<
-                          (concat <<< setDots ticksPerBeat numerator 0.0 Nil))
-                     $ divideIntoMeasures ticksPerBeat numerator 0.0 Nil midiNotes
-  let foo :: Array (Array (Tuple Number MidiNote))
-      foo = toArray $ map (position' ticksPerBeat) measuredMidi
-  let indexedTies = toArray $ map (maybeToInt <<< findStartingTie) measuredMidi
+
+renderMidiPure :: Array UnsafeMidiData -> TicksPerBeat -> VexFlowResult
+renderMidiPure dat tpb = do
+  let midiEvents = toList $ map unsafeF1 dat
+      numerator  = getNumerator midiEvents
+      midiNotes  = filter (\x -> x.noteNumber > 0)
+                   <<< map (quantizeNote tpb 0.0)
+                   <<< duration
+                   <<< map (\midiObject -> Tuple midiObject false) -- midiEventWriter
+                   <<< filter filterNotes
+                  $ toList midiEvents
+      measuredMidi = map ((concat <<< setTies tpb numerator 0.0 Nil) <<<
+                          (concat <<< setDots tpb numerator 0.0 Nil))
+                     $ divideIntoMeasures tpb numerator 0.0 Nil midiNotes
+      indexedTies  = toArray $ map findStartingTies measuredMidi
       indexedBeams :: Array (Array (Array BeamIndex))
-      indexedBeams = toUnfoldable $ map ((toArray <<< beamsIndex ticksPerBeat Nil) <<< (eighthsIndex' ticksPerBeat)) measuredMidi
-      vexFlowNotes = map (\x -> [map (midiNoteToVexFlowNote ticksPerBeat) x]) $ toArray measuredMidi
-      vexNotes     = map (\x -> [map (midiNoteToVexNote ticksPerBeat) x]) $ toArray measuredMidi
-  { vexFlowNotes, vexNotes, indexedTies, indexedBeams, numerator}
+      indexedBeams = toUnfoldable $ map ((toArray <<< beamsIndex tpb Nil) <<< (eighthsIndex' tpb)) measuredMidi
+      vexFlowNotes = map (\x -> [map (midiNoteToVexFlowNote tpb) x]) $ toArray measuredMidi
+      vexNotes     = map (\x -> [map (midiNoteToVexNote tpb) x]) $ toArray measuredMidi
+  { vexFlowNotes, vexNotes, indexedTies, indexedBeams, numerator }
 
 -- TODO glue, eliminate
--- renderMidi :: forall e. Canvas -> Array Foreign -> Eff (vexFlow :: VEXFLOW, midi :: MIDI | e) Unit
-renderMidi canvas d = do
-  ticksPerBeat <- getTicksPerBeat
-  let x = renderMidiPuurJwt d ticksPerBeat
-  renderNotation canvas x.vexFlowNotes x.vexNotes x.indexedTies x.indexedBeams x.numerator
+renderMidi :: forall e. Canvas -> Int -> Array (Array (Array Boolean)) -> VexFlowResult -> Eff (vexFlow :: VEXFLOW, midi :: MIDI | e) Unit
+renderMidi canvas colorIndex notationHasColor x = do
+  -- ticksPerBeat <- getTicksPerBeat
+  -- let x = renderMidiPure d ticksPerBeat
+  renderNotation canvas x.vexFlowNotes x.vexNotes x.indexedTies x.indexedBeams x.numerator (setHasColor colorIndex notationHasColor)
 
 -- TODO expliciete recursie wegwerken (fold ofzo)
 --FIX ALL FOR NOTEOFFS/RESTS
@@ -108,9 +114,8 @@ setTies ticksPerBeat numerator accumulatedDeltaTime accNotes (Cons note notes) =
     dt                    = accumulatedDeltaTime + note.deltaTime
     resolution            = ticksPerBeat / 4.0
 
-insertNewDeltaTime :: Number -> MidiNote -> MidiNote
-insertNewDeltaTime n midiNote = midiNote { noteNumber   = midiNote.noteNumber
-                                         , deltaTime    = n }
+insertNewDeltaTime :: DeltaTime -> MidiNote -> MidiNote
+insertNewDeltaTime n midiNote = midiNote { deltaTime    = n }
 
 -- TODO underscrores jwt
 setDots :: TicksPerBeat -> Numerator -> DeltaTime -> List MidiNote -> List MidiNote -> List (List MidiNote)
@@ -121,28 +126,34 @@ setDots ticksPerBeat numerator accumulatedDeltaTime accXs (Cons x xs) | (accumul
                                                                         (accumulatedDeltaTime == (ticksPerBeat / 2.0) * 5.0 && x.deltaTime == ticksPerBeat * 1.5) = setDots ticksPerBeat numerator (x.deltaTime + accumulatedDeltaTime) (snoc accXs $ setDot x) xs
 setDots ticksPerBeat numerator accumulatedDeltaTime accXs (Cons x xs) = setDots ticksPerBeat numerator (x.deltaTime + accumulatedDeltaTime) (snoc accXs x) xs
 
+-- Get index for notes that require beaming
+--
 eighthsIndex' :: TicksPerBeat -> List MidiNote -> List (Tuple Int Number)
 eighthsIndex' ticksPerBeat = map (\(Tuple x (Tuple y z)) -> Tuple x y) <<< filter (\(Tuple _ (Tuple _ note)) -> note.deltaTime <= (ticksPerBeat / 2.0) * 1.5) <<< indexed
   where
     indexed :: List MidiNote -> List (Tuple Int (Tuple Number MidiNote))
-    indexed notes = Data.List.Lazy.toUnfoldable <<< Data.List.Lazy.zip (Data.List.Lazy.iterate (_ + 1) 0) <<< Data.List.Lazy.fromFoldable $ position' ticksPerBeat notes
+    indexed notes = Data.List.Lazy.toUnfoldable <<< Data.List.Lazy.zip (Data.List.Lazy.iterate (_ + 1) 0) <<< Data.List.Lazy.fromFoldable $ positions ticksPerBeat notes
 
-position' :: Number -> List MidiNote -> List (Tuple Number MidiNote)
-position' ticksPerBeat (Cons x xs) = Cons (Tuple 0.0 x) (position ticksPerBeat 0.0 (Cons x xs))
-
-position :: Number -> Number -> List MidiNote -> List (Tuple Number MidiNote)
-position ticksPerBeat _   Nil                   = Nil
-position ticksPerBeat _   (Cons x Nil)          = Nil
-position ticksPerBeat pos (Cons x (Cons y Nil)) = Cons (Tuple (pos + x.deltaTime) y)  Nil
-position ticksPerBeat pos (Cons x (Cons y ys))  = Cons (Tuple (toNumber (mod (round (x.deltaTime + pos)) (round (ticksPerBeat * 4.0)))) y) (position ticksPerBeat (pos + x.deltaTime) (Cons y ys))
+-- Will cause rounding problems, because 'mod' does not accept Numbers...
+-- TPB * Numerator ipv 4.0
+positions :: TicksPerBeat -> List MidiNote -> List (Tuple DeltaTime MidiNote)
+positions tpb midiNotes = zip sumDeltaTimes midiNotes
+  where
+    barPosition :: DeltaTime -> DeltaTime
+    barPosition d = toNumber <<< mod (round d) <<< round $ tpb * 4.0
+    deltaTimes :: List DeltaTime
+    deltaTimes = map (\note -> note.deltaTime) midiNotes
+    sumDeltaTimes :: List DeltaTime
+    sumDeltaTimes = Cons 0.0 <<< reverse $ mapWithIndex (\_ i -> barPosition <<< foldl (+) 0.0 $ take (length midiNotes - i) deltaTimes) midiNotes
 
 --foldr
 beamsIndex :: Number -> List Int -> List (Tuple Int Number) -> List (List Int)
 beamsIndex _ accXs Nil                               = Cons accXs          Nil
 beamsIndex ticksPerBeat accXs (Cons x Nil)           = Cons (snoc accXs (fst x)) Nil
-beamsIndex ticksPerBeat accXs (Cons x (Cons y ys)) | (snd x) == ((ticksPerBeat / 4.0) * 3.0) = Cons (snoc accXs (fst x)) (beamsIndex ticksPerBeat  Nil (Cons y ys))
+beamsIndex ticksPerBeat accXs (Cons x (Cons y ys)) | ((snd x) == ((ticksPerBeat / 4.0) * 2.0)) && ((snd y) == ((ticksPerBeat / 4.0) * 3.0)) = Cons (snoc (snoc accXs (fst x)) (fst y)) (beamsIndex ticksPerBeat Nil ys)
+beamsIndex ticksPerBeat accXs (Cons x (Cons y ys)) | ((snd x) == ((ticksPerBeat / 4.0) * 6.0 )) && ((snd y) == ((ticksPerBeat / 4.0) * 8.0)) = Cons (snoc accXs (fst x)) (beamsIndex ticksPerBeat  Nil (Cons y ys))
+beamsIndex ticksPerBeat accXs (Cons x (Cons y (Cons z zs))) | ((snd x) == ((ticksPerBeat / 4.0) * 2.0)) && ((snd z) == ((ticksPerBeat / 4.0) * 5.0)) = Cons (snoc accXs (fst x)) (beamsIndex ticksPerBeat  Nil (Cons y (Cons z zs)))
 beamsIndex ticksPerBeat accXs (Cons x (Cons y ys)) | (snd x) == ((ticksPerBeat / 4.0) * 11.0) = Cons (snoc accXs (fst x)) (beamsIndex ticksPerBeat  Nil (Cons y ys))
-beamsIndex ticksPerBeat accXs (Cons x (Cons y ys)) | (snd x) == ((ticksPerBeat / 2.0) * 3.0) || (snd x) == ((ticksPerBeat / 4.0) * 7.0) = Cons (snoc accXs (fst x)) (beamsIndex ticksPerBeat  Nil (Cons y ys))
 beamsIndex ticksPerBeat accXs (Cons x (Cons y ys)) | (fst x) /= (fst y) - 1 = Cons accXs (beamsIndex ticksPerBeat  Nil (Cons y ys))
 beamsIndex ticksPerBeat accXs (Cons x (Cons y ys)) | (fst x) == (fst y) - 1 = beamsIndex ticksPerBeat (snoc accXs (fst x)) (Cons y ys)
 
@@ -156,113 +167,88 @@ setFirstTie midiNote = midiNote { hasFirstTie = true }
 setEndingTie :: MidiNote -> MidiNote
 setEndingTie midiNote = midiNote { hasEndingTie = true }
 
---REPLACE WITH WRITER MONAD
 -- TODO read about ST monad and arrays
 midiEventWriter :: List MidiEvent -> List (Tuple MidiEvent Boolean)
 midiEventWriter = map (\midiObject -> Tuple midiObject false)
 
--- TODO kunnen we dit gewoon 'duration' noemen?
-calculateDuration :: List (Tuple MidiEvent Boolean) -> List MidiNote
-calculateDuration Nil = Nil
-calculateDuration midiEvents@(Cons (Tuple (NoteOn midiEvent) isRead) xs) =
+--fold
+duration :: List (Tuple MidiEvent Boolean) -> List MidiNote
+duration Nil = Nil
+duration midiEvents@(Cons (Tuple (NoteOn midiEvent) isRead) xs) =
   if midiEvent.subtype == "noteOn" then
     Cons { noteNumber   : midiEvent.noteNumber
-         , deltaTime    : (accumulateDeltaTime midiEvent.noteNumber 0.0 midiEvents) - midiEvent.deltaTime
+         , deltaTime    : (sum midiEvent.noteNumber midiEvents) - midiEvent.deltaTime
          , hasFirstTie  : false
          , hasEndingTie : false
          , hasDot       : false}
-    (calculateDuration (replaceBy (==) (noteOff) (toRead noteOff) xs))
-  else calculateDuration xs
+    (duration (replaceBy (==) (noteOff) (toRead noteOff) xs))
+  else duration xs
   where
     noteOff :: Tuple MidiEvent Boolean
     noteOff = fromRight $ findNoteOff midiEvent.noteNumber xs
     toRead :: Tuple MidiEvent Boolean -> Tuple MidiEvent Boolean
     toRead (Tuple midiEvent _) = Tuple midiEvent true
-    -- toRead = map (const true)
-calculateDuration (Cons x xs) =
-  calculateDuration xs
+duration (Cons x xs) =
+  duration xs
 
--- TODO sum? lekker kort
-accumulateDeltaTime :: Int -> Number -> List (Tuple MidiEvent Boolean) -> Number
-accumulateDeltaTime _ _ Nil = 0.0
-accumulateDeltaTime noteNumber acc (Cons (Tuple (NoteOn  y) isRead) xs) = accumulateDeltaTime noteNumber (acc + y.deltaTime) xs
-accumulateDeltaTime noteNumber acc (Cons (Tuple (NoteOff y) isRead) xs) = if y.noteNumber == noteNumber && not isRead
-                                                                          then acc + y.deltaTime
-                                                                          else accumulateDeltaTime noteNumber (acc + y.deltaTime) xs
-accumulateDeltaTime noteNumber acc (Cons x xs) = accumulateDeltaTime noteNumber acc xs
+sum :: NoteNumber -> List (Tuple MidiEvent Boolean) -> Number
+sum n xs = foldl (\b x -> getDeltaTime x + b) 0.0 <<< flip take xs <<< (+) 1 <<< fromMaybe 0 $ findIndex (getNoteOff n) xs
+    where
+      getDeltaTime :: Tuple MidiEvent Boolean -> DeltaTime
+      getDeltaTime (Tuple (NoteOn  x) _) = x.deltaTime
+      getDeltaTime (Tuple (NoteOff x) _) = x.deltaTime
+
+getNoteOff :: NoteNumber -> Tuple MidiEvent Boolean -> Boolean
+getNoteOff n (Tuple (NoteOff note) isRead) | note.noteNumber == n && (not isRead) = true
+getNoteOff _ _                                                                         = false
 
 -- Error to console
+findNoteOff' :: NoteNumber -> List (Tuple MidiEvent Boolean) -> Either String (Tuple MidiEvent Boolean)
+findNoteOff' n = foldl (\b t -> if getNoteOff n t then Right t else b) (Left "No corresponding unread noteOff found.")
+
 findNoteOff :: Int -> List (Tuple MidiEvent Boolean) -> Either String (Tuple MidiEvent Boolean)
-findNoteOff _ Nil = Left "No corresponding unread noteOff found."
-findNoteOff n (Cons noteOff@(Tuple (NoteOff midiEvent) isRead) xs) =
-  if midiEvent.noteNumber == n && not isRead then Right noteOff else findNoteOff n xs
+findNoteOff _ Nil                                                  = Left "No corresponding unread noteOff found."
+findNoteOff n (Cons noteOff@(Tuple (NoteOff midiEvent) isRead) xs) = if midiEvent.noteNumber == n && not isRead then Right noteOff else findNoteOff n xs
+findNoteOff n (Cons _ xs)                                          = findNoteOff n xs
 
--- findNoteOff n (Cons noteOff@(Tuple (NoteOff midiEvent) false) _) | midiEvent.noteNumber == n =
---   Right noteOff
--- findNoteOff n (Cons         (Tuple (NoteOff midiEvent) _)     notes) =
---   findNoteOff n notes
+filterNotes :: MidiEvent -> Boolean
+filterNotes (NoteOn  _) = true
+filterNotes (NoteOff _) = true
+filterNotes _           = false
 
-findNoteOff n (Cons _ xs) = findNoteOff n xs
-
--- TODO filter!!!#!!## 1 !! LOLOL
--- extractor / view pattern
-
--- filterNotes :: List MidiEvent -> List MidiEvent
--- filterNotes Nil                     = Nil
--- filterNotes (Cons e@(NoteOn  x) xs) = Cons e (filterNotes xs)
--- filterNotes (Cons e@(NoteOff x) xs) = Cons e (filterNotes xs)
--- filterNotes (Cons _ xs)             = filterNotes xs
-
--- filterNotes = filter metsj
-
-metsj :: MidiEvent -> Boolean
-metsj (NoteOn  _) = true
-metsj (NoteOff _) = true
-metsj _           = false
+filterNoteEvent :: Tuple MidiEvent Boolean -> Boolean
+filterNoteEvent (Tuple (NoteOn  x) b) = true
+filterNoteEvent (Tuple (NoteOff x) b) = true
+filterNoteEvent _                     = false
 
 getNumerator :: List MidiEvent -> Int
-getNumerator (Cons y@(TimeSignature x) xs) = x.numerator
-getNumerator (Cons x xs)                   = getNumerator xs
+getNumerator = foldl (\b x -> num x b) 1
+  where
+    num x b = case x of
+      (TimeSignature r) -> r.numerator
+      _                 -> b 
 
 getDeltaTimeNotes :: List MidiEvent -> List Number
-getDeltaTimeNotes Nil                     = Nil
-getDeltaTimeNotes (Cons y@(NoteOn  x) xs) = Cons x.deltaTime (getDeltaTimeNotes xs)
-getDeltaTimeNotes (Cons y@(NoteOff x) xs) = Cons x.deltaTime (getDeltaTimeNotes xs)
-getDeltaTimeNotes (Cons x xs)             = getDeltaTimeNotes xs
+getDeltaTimeNotes = map getDeltaTime <<< filter filterNotes
+  where
+    getDeltaTime (NoteOn  x) = x.deltaTime
+    getDeltaTime (NoteOff x) = x.deltaTime
 
-separateStaff :: List MidiEvent -> List MidiEvent
-separateStaff Nil                                         = Nil
-separateStaff (Cons y@(NoteOn x) xs)  | x.noteNumber > 59 = Cons y (separateStaff xs)
-separateStaff (Cons y@(NoteOff x) xs) | x.noteNumber > 59 = Cons y (separateStaff xs)
-separateStaff (Cons x xs)                                 = separateStaff xs
-
--- Data.Maybe API ff goed bestuderen voor handige funcjes
-findStartingTie :: List MidiNote -> List (Maybe Int)
-findStartingTie = mapWithIndex (\note i -> if note.hasFirstTie then Just i else Nothing)
+findStartingTies :: List MidiNote -> List Int
+findStartingTies = catMaybes <<< mapWithIndex (\note i -> if note.hasFirstTie then pure i else Nothing)
 
 midiNoteToVexFlowNote :: Number -> MidiNote -> VexFlowNote
 midiNoteToVexFlowNote ticksPerBeat x = { pitch    : [vexNoteToVexFlowPitch $ midiNoteToVexTone x.noteNumber]
                                        , duration : deltaTimeToVexFlowDuration ticksPerBeat x.deltaTime}
 
-midiNoteToVexNote :: Number -> MidiNote -> VexNote
-midiNoteToVexNote ticksPerBeat x = { note     : [midiNoteToVexTone x.noteNumber]
-                                   , duration : deltaTimeToVexFlowDuration ticksPerBeat x.deltaTime}
+midiNoteToVexNote :: TicksPerBeat -> MidiNote -> VexNote
+midiNoteToVexNote tpb n = { note     : [midiNoteToVexTone n.noteNumber]
+                          , duration : deltaTimeToVexFlowDuration tpb n.deltaTime}
 
 midiNoteToVexTone :: Int -> VexTone
 midiNoteToVexTone midiNote = { pitch      : fst <<< midiNoteToPartialVexFlowNote $ mod midiNote 12
                              , accidental : snd <<< midiNoteToPartialVexFlowNote $ mod midiNote 12
-                             , octave     : midiNoteToOctave midiNote
-                             }
-
--- zie wederom Data.Maybe, iets van catMaybes of filterMaybes ofzo
-maybeToInt :: List (Maybe Int) -> List Int
-maybeToInt Nil = Nil
-maybeToInt (Cons Nothing xs) = (maybeToInt xs)
-maybeToInt (Cons x xs)       = Cons (fromJust x) (maybeToInt xs)
-
--- -- NOTHING? ja fromJust mag je ook niet gebruiken
--- fromJust :: forall a. Maybe a -> a
--- fromJust (Just x) = x
+                             , octave     : (midiNoteToOctave midiNote) - 1}
 
 replaceBy :: forall a. (a -> a -> Boolean) -> a -> a -> List a -> List a
 replaceBy _ _ _ Nil                     = Nil

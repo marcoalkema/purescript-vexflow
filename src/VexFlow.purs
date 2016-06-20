@@ -14,6 +14,8 @@ import Data.Int (toNumber)
 import Data.Array (zipWith, index)
 import Data.Foldable (traverse_)
 
+
+-- Import purescript-Canvas!!!!
 foreign import data VEXFLOW :: !
 foreign import data VexFlow :: *
 foreign import data CANVAS  :: !
@@ -37,37 +39,43 @@ foreign import addBeams            :: forall e. VexFlow       -> Array (Array Be
 foreign import addNotesToVoice     :: forall e. VexFlow       -> (Eff (vexFlow :: VEXFLOW) VexFlow) -> Eff (vexFlow :: VEXFLOW | e) VexFlow
 foreign import drawBeams           :: forall e. VexFlow       -> VexFlow                            -> Eff (vexFlow :: VEXFLOW | e) Unit
 foreign import drawTies            :: forall e. VexFlow       -> VexFlow                            -> Eff (vexFlow :: VEXFLOW | e) Unit
+foreign import setColor            :: forall e. VexFlow       -> (Array (Array IsRed))                           -> Eff (vexFlow :: VEXFLOW | e) VexFlow
+foreign import logging             :: forall a e. a -> Eff (vexFlow :: VEXFLOW | e) Unit
 
 type AccidentalBar   = (Array (Array (Array (Tuple String Int))))
 type AccidentalVoice = Array AccidentalBar
 type TieIndex        = Int
 type BeamIndex       = Int
+type IsRed           = Boolean
+type Numerator       = Int
 
-renderNotation :: forall e. Canvas -> VexFlowMusic -> VexMusic -> Array (Array TieIndex) -> Array (Array (Array BeamIndex)) -> Int -> Eff (vexFlow :: VEXFLOW, midi :: MidiPlayer.MIDI | e) Unit
-renderNotation canvas notes vexNotes indexedTies indexedBeams num = do
+renderNotation :: forall e. Canvas -> VexFlowMusic -> VexMusic -> Array (Array TieIndex) -> Array (Array (Array BeamIndex)) -> Int -> Array (Array (Array Boolean)) -> Eff (vexFlow :: VEXFLOW, midi :: MidiPlayer.MIDI | e) Unit
+renderNotation canvas notes vexNotes indexedTies indexedBeams num colors = do
   renderer <- createRenderer canvas
   drawPrimaryStave renderer "treble" "C" num
-  drawNotation num notes (musicWithIndexedAccidentals vexNotes) renderer indexedTies indexedBeams
+  drawNotation num notes (musicWithIndexedAccidentals vexNotes) renderer indexedTies indexedBeams colors
 
-drawNotation :: forall e. Int -> VexFlowMusic -> AccidentalVoice -> VexFlow -> Array (Array TieIndex) -> Array (Array (Array BeamIndex)) -> Eff (vexFlow :: VEXFLOW | e) Unit
-drawNotation num music accidentals renderer indexedTies indexedBeams = do
+drawNotation :: forall e. Numerator -> VexFlowMusic -> AccidentalVoice -> VexFlow -> Array (Array TieIndex) -> Array (Array (Array BeamIndex)) -> Array (Array (Array Boolean)) -> Eff (vexFlow :: VEXFLOW | e) Unit
+drawNotation num music accidentals renderer indexedTies indexedBeams colors = do
   let stave         = renderStaff renderer 280.0
       voices        = zipWith (renderVoice num) music accidentals
       indexedVoices = addIndexToArray voices
-  traverse_ (\(Tuple i voice) -> stave i $ voice (fromJust $ index indexedTies i) (fromJust $ index indexedBeams i)) indexedVoices
+  traverse_ (\(Tuple i voice) -> stave i $ voice (fromMaybe [] $ index indexedTies i) (fromMaybe [[]] $ index indexedBeams i) (fromMaybe [[false]] $ index colors i)) indexedVoices
 
 -- createNewVoice with denominator & numerator
-renderVoice :: forall e. Int -> VexFlowBar -> AccidentalBar -> Array TieIndex -> Array (Array BeamIndex) -> VexFlow -> VexFlow -> Eff (vexFlow :: VEXFLOW | e) Unit
-renderVoice num bar accidentals indexedTies indexedBeams context stave = do
+renderVoice :: forall e. Int -> VexFlowBar -> AccidentalBar -> Array TieIndex -> Array (Array BeamIndex) -> Array (Array Boolean) -> VexFlow -> VexFlow -> Eff (vexFlow :: VEXFLOW | e) Unit
+renderVoice num bar accidentals indexedTies indexedBeams colors context stave  = do
   notes            <- createNotes bar
   addedAccidentals <- addAccidentals notes accidentals
   tiedNotes        <- addTies addedAccidentals indexedTies
   beamedNotes      <- addBeams addedAccidentals indexedBeams
   voicing          <- addNotesToVoice addedAccidentals (createNewVoice num 4.0)
   formatter voicing (260.0)
+  setColor notes colors
   drawVoice context stave voicing
   drawTies tiedNotes context
   drawBeams beamedNotes context
+
 
 -- createStaff: Break system per 4 bars
 renderStaff :: forall e. VexFlow -> Number -> Int -> (VexFlow -> VexFlow -> (Eff (vexFlow :: VEXFLOW | e) Unit)) -> Eff (vexFlow :: VEXFLOW | e) Unit
@@ -78,7 +86,7 @@ renderStaff renderer w i voice = do
   voice ctx stave
 
 -- createTimeSignature with numerator
-drawPrimaryStave :: forall e. VexFlow -> Clef -> KeySignature -> Int -> Eff (vexFlow :: VEXFLOW | e) Unit
+drawPrimaryStave :: forall e. VexFlow -> Clef -> KeySignature -> Numerator -> Eff (vexFlow :: VEXFLOW | e) Unit
 drawPrimaryStave renderer clef key num = do
     ctx   <- createCtx renderer
     stave <- createStave 1 1 80.0
@@ -101,9 +109,6 @@ drawPrimaryStave renderer clef key num = do
 --     Vx.createKeySignature key stave
 --     Vx.createTimeSignature "4/4" stave
 --     Vx.drawKeyStave stave "bass" ctx
-
-fromJust :: forall a. Maybe a -> a
-fromJust (Just x) = x
 
 mapWithIndex :: forall a b. (a -> Int -> b) -> List a -> List b
 mapWithIndex f lst = Data.List.reverse $ go 0 lst Nil

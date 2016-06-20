@@ -11,7 +11,7 @@ module.exports = {
 
     createRenderer: (function(canvas) {
     	return function() {;
-    	    var renderer = new Vex.Flow.Renderer(canvas, Vex.Flow.Renderer.Backends.CANVAS);
+    			   var renderer = new Vex.Flow.Renderer(canvas, Vex.Flow.Renderer.Backends.CANVAS);
     	    return renderer;
     	};
     }),
@@ -79,10 +79,10 @@ module.exports = {
     		return voices.map(function(voice){
     		    return voice.map(function(note){
 			if (note.duration.indexOf("d") > 0) {
-			    return (new Vex.Flow.StaveNote({ keys: note.pitch, duration: note.duration})).addDotToAll();
+			    return (new Vex.Flow.StaveNote({ keys: note.pitch, duration: note.duration}, true)).addDotToAll();
 			}
 			else {
-    			    return (new Vex.Flow.StaveNote({ keys: note.pitch, duration: note.duration}));
+    			    return (new Vex.Flow.StaveNote({ keys: note.pitch, duration: note.duration}, true));
 			}
 			
     		    });
@@ -123,12 +123,17 @@ module.exports = {
 		return voices.map(function(voice){
 		    return indices.map(function(index){
 			if (index.length > 1) {
-				var start = index[0];
-				var end = index[index.length - 1] + 1;
-				var group = voice.slice(start, end);
-				var kip = new Vex.Flow.Beam(group);
-				return kip;
-			    };
+			    var start = index[0];
+			    var end = index[index.length - 1] + 1;
+			    var group = voice.slice(start, end);
+			    var beam = new Vex.Flow.Beam(group, true);
+			    
+			    // beam.setContext
+			    // console.log(beam.setContext(fillStyle));
+			    beam.setContext({strokeStyle: "#444444", fillStyle: "#444444", stemStyle: "#444444"});
+			    // beam.getStem(3).setStyle({ strokeStyle: 'red' });
+			    return beam;
+			};
 		    });
 		});
 	    };
@@ -152,7 +157,7 @@ module.exports = {
     
     addNotesToVoice: function(notes) {
     	return function(voice) {
-    		return function() {
+    	    return function() {
     		    return notes.map(function(note) {
     			return voice().addTickables(note);
     		    });
@@ -193,7 +198,6 @@ module.exports = {
     drawBeams: function(voices) {
 	return function(ctx){
 	    return function(){
-		console.log(voices);
 		voices.map(function(voice){
 		    voice.map(function(v) {
 			if (v != undefined) {
@@ -203,7 +207,34 @@ module.exports = {
 		});
 	    };
 	};
+    },
+
+    setColor : function(voices){
+	return function(color){
+	    return function() {
+    		return voices.map(function(voice, i){
+    		    return voice.map(function(note, j){
+			// if (note.beam != null) {
+			//     note.beam.context.setFillStyle("red");
+			// }
+			if (color[i][j]) {
+			    return note.setStyle({strokeStyle: "red", fillStyle: "red", stemStyle: "red"});
+			}
+			else {
+			    return note.setStyle({strokeStyle: "black", stemStyle: "black"});
+			}
+		    });
+		});
+	    };
+	    
+	};
+    },
+
+    logging : function(n){
+	return function(){
+	    console.log(n);
+	};
     }
+    
+
 };
-
-
