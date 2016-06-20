@@ -52,7 +52,7 @@ renderMidiPure dat tpb = do
                    <<< filter filterNotes
                   $ toList midiEvents
       measuredMidi = map ((concat <<< setTies tpb numerator 0.0 Nil) <<<
-                          (concat <<< setDots tpb numerator 0.0 Nil))
+                          (setDots tpb numerator))
                      $ divideIntoMeasures tpb numerator 0.0 Nil midiNotes
       indexedTies  = toArray $ map findStartingTies measuredMidi
       indexedBeams :: Array (Array (Array BeamIndex))
@@ -117,14 +117,32 @@ setTies ticksPerBeat numerator accumulatedDeltaTime accNotes (Cons note notes) =
 insertNewDeltaTime :: DeltaTime -> MidiNote -> MidiNote
 insertNewDeltaTime n midiNote = midiNote { deltaTime    = n }
 
--- TODO underscrores jwt
-setDots :: TicksPerBeat -> Numerator -> DeltaTime -> List MidiNote -> List MidiNote -> List (List MidiNote)
-setDots _            _         _                    accXs Nil = Cons accXs Nil
-setDots ticksPerBeat numerator accumulatedDeltaTime accXs (Cons x xs) | (accumulatedDeltaTime == 0.0 && x.deltaTime == ticksPerBeat * 1.5 )                       ||
-                                                                        (accumulatedDeltaTime == ticksPerBeat / 2.0 && x.deltaTime == ticksPerBeat * 1.5)         ||
-                                                                        (accumulatedDeltaTime == (ticksPerBeat / 2.0) * 4.0 && x.deltaTime == ticksPerBeat * 1.5) ||
-                                                                        (accumulatedDeltaTime == (ticksPerBeat / 2.0) * 5.0 && x.deltaTime == ticksPerBeat * 1.5) = setDots ticksPerBeat numerator (x.deltaTime + accumulatedDeltaTime) (snoc accXs $ setDot x) xs
-setDots ticksPerBeat numerator accumulatedDeltaTime accXs (Cons x xs) = setDots ticksPerBeat numerator (x.deltaTime + accumulatedDeltaTime) (snoc accXs x) xs
+setDots :: TicksPerBeat -> Numerator -> List MidiNote -> (List MidiNote)
+setDots tpb num notes = mapWithIndex fn notes
+  where
+    fn :: MidiNote -> Int -> MidiNote
+    fn n i | (currentPosition i == 0.0 && n.deltaTime == tpb * 1.5 )              ||
+             (currentPosition i == tpb / 2.0 && n.deltaTime == tpb * 1.5)         ||
+             (currentPosition i == (tpb / 2.0) * 4.0 && n.deltaTime == tpb * 1.5) ||
+             (currentPosition i == (tpb / 2.0) * 5.0 && n.deltaTime == tpb * 1.5)  = setDot n
+    fn n _    = n
+    setDot :: MidiNote -> MidiNote
+    setDot midiNote = midiNote { hasDot = true }
+    currentPosition :: Int -> DeltaTime
+    currentPosition i = fromMaybe 0.0 <<< flip index i $ sumDeltaTimes tpb notes
+
+positions :: TicksPerBeat -> List MidiNote -> List (Tuple DeltaTime MidiNote)
+positions tpb notes = flip zip notes $ sumDeltaTimes tpb notes
+
+deltaTimes :: List MidiNote -> List DeltaTime
+deltaTimes = map (\note -> note.deltaTime)
+
+sumDeltaTimes :: TicksPerBeat -> List MidiNote -> List DeltaTime
+sumDeltaTimes tpb notes = Cons 0.0 <<< reverse $ mapWithIndex (\_ i -> barPosition tpb <<< foldl (+) 0.0 $ take (length notes - i) $ deltaTimes notes) notes
+      
+-- TODO : TPB * Numerator ipv 4.0
+barPosition :: TicksPerBeat -> DeltaTime -> DeltaTime
+barPosition tpb d = toNumber <<< mod (round d) <<< round $ tpb * 4.0
 
 -- Get index for notes that require beaming
 --
@@ -134,17 +152,7 @@ eighthsIndex' ticksPerBeat = map (\(Tuple x (Tuple y z)) -> Tuple x y) <<< filte
     indexed :: List MidiNote -> List (Tuple Int (Tuple Number MidiNote))
     indexed notes = Data.List.Lazy.toUnfoldable <<< Data.List.Lazy.zip (Data.List.Lazy.iterate (_ + 1) 0) <<< Data.List.Lazy.fromFoldable $ positions ticksPerBeat notes
 
--- Will cause rounding problems, because 'mod' does not accept Numbers...
--- TPB * Numerator ipv 4.0
-positions :: TicksPerBeat -> List MidiNote -> List (Tuple DeltaTime MidiNote)
-positions tpb midiNotes = zip sumDeltaTimes midiNotes
-  where
-    barPosition :: DeltaTime -> DeltaTime
-    barPosition d = toNumber <<< mod (round d) <<< round $ tpb * 4.0
-    deltaTimes :: List DeltaTime
-    deltaTimes = map (\note -> note.deltaTime) midiNotes
-    sumDeltaTimes :: List DeltaTime
-    sumDeltaTimes = Cons 0.0 <<< reverse $ mapWithIndex (\_ i -> barPosition <<< foldl (+) 0.0 $ take (length midiNotes - i) deltaTimes) midiNotes
+-- TODO : Will cause rounding problems, because 'mod' does not accept Numbers...
 
 --foldr
 beamsIndex :: Number -> List Int -> List (Tuple Int Number) -> List (List Int)
@@ -157,9 +165,10 @@ beamsIndex ticksPerBeat accXs (Cons x (Cons y ys)) | (snd x) == ((ticksPerBeat /
 beamsIndex ticksPerBeat accXs (Cons x (Cons y ys)) | (fst x) /= (fst y) - 1 = Cons accXs (beamsIndex ticksPerBeat  Nil (Cons y ys))
 beamsIndex ticksPerBeat accXs (Cons x (Cons y ys)) | (fst x) == (fst y) - 1 = beamsIndex ticksPerBeat (snoc accXs (fst x)) (Cons y ys)
 
--- TODO read about purescript's profunctor lenses
-setDot :: MidiNote -> MidiNote
-setDot midiNote = midiNote { hasDot = true }
+-- beamsIndex :: TicksPerBeat -> List Int -> List (Tuple Int Number) -> List (List Int)
+-- beamsIndex tpb foo xs = foldl fn Nil xs
+--   where
+--     fn = 
 
 setFirstTie :: MidiNote -> MidiNote
 setFirstTie midiNote = midiNote { hasFirstTie = true }
@@ -191,6 +200,11 @@ duration midiEvents@(Cons (Tuple (NoteOn midiEvent) isRead) xs) =
 duration (Cons x xs) =
   duration xs
 
+-- duration' :: List (Tuple MidiEvent Boolean) -> List MidiNote
+-- duration' = foldl fn Nil
+--   where
+--     fn b x = 
+
 sum :: NoteNumber -> List (Tuple MidiEvent Boolean) -> Number
 sum n xs = foldl (\b x -> getDeltaTime x + b) 0.0 <<< flip take xs <<< (+) 1 <<< fromMaybe 0 $ findIndex (getNoteOff n) xs
     where
@@ -200,7 +214,7 @@ sum n xs = foldl (\b x -> getDeltaTime x + b) 0.0 <<< flip take xs <<< (+) 1 <<<
 
 getNoteOff :: NoteNumber -> Tuple MidiEvent Boolean -> Boolean
 getNoteOff n (Tuple (NoteOff note) isRead) | note.noteNumber == n && (not isRead) = true
-getNoteOff _ _                                                                         = false
+getNoteOff _ _                                                                     = false
 
 -- Error to console
 findNoteOff' :: NoteNumber -> List (Tuple MidiEvent Boolean) -> Either String (Tuple MidiEvent Boolean)
