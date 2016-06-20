@@ -118,14 +118,14 @@ insertNewDeltaTime :: DeltaTime -> MidiNote -> MidiNote
 insertNewDeltaTime n midiNote = midiNote { deltaTime    = n }
 
 setDots :: TicksPerBeat -> Numerator -> List MidiNote -> (List MidiNote)
-setDots tpb num notes = mapWithIndex fn notes
+setDots tpb num notes = mapWithIndex checkPosition notes
   where
-    fn :: MidiNote -> Int -> MidiNote
-    fn n i | (currentPosition i == 0.0 && n.deltaTime == tpb * 1.5 )              ||
+    checkPosition :: MidiNote -> Int -> MidiNote
+    checkPosition n i | (currentPosition i == 0.0 && n.deltaTime == tpb * 1.5 )              ||
              (currentPosition i == tpb / 2.0 && n.deltaTime == tpb * 1.5)         ||
              (currentPosition i == (tpb / 2.0) * 4.0 && n.deltaTime == tpb * 1.5) ||
              (currentPosition i == (tpb / 2.0) * 5.0 && n.deltaTime == tpb * 1.5)  = setDot n
-    fn n _    = n
+    checkPosition n _  = n
     setDot :: MidiNote -> MidiNote
     setDot midiNote = midiNote { hasDot = true }
     currentPosition :: Int -> DeltaTime
