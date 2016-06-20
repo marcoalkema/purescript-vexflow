@@ -4,30 +4,28 @@ import Prelude
 import Control.Monad.Eff (Eff)
 import Control.Monad.Aff
 import Control.Monad.Eff.Console (CONSOLE, log)
-import Data.List (List(Nil, Cons), snoc)
+import ColorNotation
 import Data.Either (Either(Right, Left))
 import Data.Foreign
+import Data.Foldable
+import Data.Foldable (foldl)
+import Data.Int
+import Data.List
+import Data.List (List(Nil, Cons), snoc, concat, filter)
+import Data.Maybe
 import Data.Tuple
+import MidiJS as MidiPlayer2
 import MidiJsTypes
 import MidiJsTypes (MidiNote)
 import MidiPlayer
-import MidiJS as MidiPlayer2
-import VexMusic
-import Data.Foldable (foldl)
-import Data.Maybe
-import VexFlow
-import Data.Int
-import Data.List
-import Data.List (concat, filter)
-import Quantizer
 import Signal
-import ColorNotation
-import Data.Foldable
+import Quantizer
+import VexFlow
+import VexMusic
 
 type TicksPerBeat   = Number
 type Numerator      = Int
 type DeltaTime      = Number
-type UnsafeMidiData = Foreign
 type TicksPerBeat   = Number
 type NoteNumber     = Int
 
@@ -50,9 +48,8 @@ renderMidiPure dat tpb = do
                    <<< duration
                    <<< map (\midiObject -> Tuple midiObject false) -- midiEventWriter
                    <<< filter filterNotes
-                  $ toList midiEvents
-      measuredMidi = map ((concat <<< setTies tpb numerator 0.0 Nil) <<<
-                          (setDots tpb numerator))
+                   $ toList midiEvents
+      measuredMidi = map (concat <<< setTies tpb numerator 0.0 Nil <<< setDots tpb numerator)
                      $ divideIntoMeasures tpb numerator 0.0 Nil midiNotes
       indexedTies  = toArray $ map findStartingTies measuredMidi
       indexedBeams :: Array (Array (Array BeamIndex))
@@ -64,15 +61,10 @@ renderMidiPure dat tpb = do
 -- TODO glue, eliminate
 renderMidi :: forall e. Canvas -> Int -> Array (Array (Array Boolean)) -> VexFlowResult -> Eff (vexFlow :: VEXFLOW, midi :: MIDI | e) Unit
 renderMidi canvas colorIndex notationHasColor x = do
-  -- ticksPerBeat <- getTicksPerBeat
-  -- let x = renderMidiPure d ticksPerBeat
   renderNotation canvas x.vexFlowNotes x.vexNotes x.indexedTies x.indexedBeams x.numerator (setHasColor colorIndex notationHasColor)
 
 -- TODO expliciete recursie wegwerken (fold ofzo)
 --FIX ALL FOR NOTEOFFS/RESTS
--- foo :: TicksPerBeat -> Numerator -> DeltaTime -> List MidiNote -> List (List MidiNote) -> List (List MidiNote)
--- foo tpb num accDt accNotes lst = foldl
-
 divideIntoMeasures :: TicksPerBeat -> Numerator -> DeltaTime -> List MidiNote -> List MidiNote -> List (List MidiNote)
 divideIntoMeasures ticksPerBeat numerator accumulatedDeltaTime accNotes Nil = Nil
 divideIntoMeasures ticksPerBeat numerator accumulatedDeltaTime accNotes (Cons note notes) =
@@ -89,10 +81,15 @@ divideIntoMeasures ticksPerBeat numerator accumulatedDeltaTime accNotes (Cons no
     newFirstNoteDeltaTime = note.deltaTime - lastNoteDeltaTime
     dt                    = accumulatedDeltaTime + note.deltaTime
     createStartTie        = setFirstTie <<< insertNewDeltaTime lastNoteDeltaTime
-    createEndingTie       = setEndingTie <<< insertNewDeltaTime newFirstNoteDeltaTime 
+    createEndingTie       = setEndingTie <<< insertNewDeltaTime newFirstNoteDeltaTime
 
--- duplicatie elimineren mbv if-then ipv guards
+setFirstTie :: MidiNote -> MidiNote
+setFirstTie midiNote = midiNote { hasFirstTie = true }
 
+setEndingTie :: MidiNote -> MidiNote
+setEndingTie midiNote = midiNote { hasEndingTie = true }
+
+--fold
 setTies :: TicksPerBeat -> Numerator -> DeltaTime -> List MidiNote -> List MidiNote -> List (List MidiNote)
 setTies ticksPerBeat numerator accumulatedDeltaTime accNotes Nil = Cons accNotes Nil
 setTies ticksPerBeat numerator accumulatedDeltaTime accNotes (Cons note notes) =
@@ -114,17 +111,20 @@ setTies ticksPerBeat numerator accumulatedDeltaTime accNotes (Cons note notes) =
     dt                    = accumulatedDeltaTime + note.deltaTime
     resolution            = ticksPerBeat / 4.0
 
+-- setTies :: TicksPerBeat -> Numerator -> List MidiNote -> List (List MidiNote)
+-- setTies tpb num notes = map fn notes
+
 insertNewDeltaTime :: DeltaTime -> MidiNote -> MidiNote
-insertNewDeltaTime n midiNote = midiNote { deltaTime    = n }
+insertNewDeltaTime n midiNote = midiNote { deltaTime = n }
 
 setDots :: TicksPerBeat -> Numerator -> List MidiNote -> (List MidiNote)
 setDots tpb num notes = mapWithIndex checkPosition notes
   where
     checkPosition :: MidiNote -> Int -> MidiNote
-    checkPosition n i | (currentPosition i == 0.0 && n.deltaTime == tpb * 1.5 )              ||
-             (currentPosition i == tpb / 2.0 && n.deltaTime == tpb * 1.5)         ||
-             (currentPosition i == (tpb / 2.0) * 4.0 && n.deltaTime == tpb * 1.5) ||
-             (currentPosition i == (tpb / 2.0) * 5.0 && n.deltaTime == tpb * 1.5)  = setDot n
+    checkPosition n i | (currentPosition i == 0.0               && n.deltaTime == tpb * 1.5) ||
+                        (currentPosition i == tpb / 2.0         && n.deltaTime == tpb * 1.5) ||
+                        (currentPosition i == (tpb / 2.0) * 4.0 && n.deltaTime == tpb * 1.5) ||
+                        (currentPosition i == (tpb / 2.0) * 5.0 && n.deltaTime == tpb * 1.5)  = setDot n
     checkPosition n _  = n
     setDot :: MidiNote -> MidiNote
     setDot midiNote = midiNote { hasDot = true }
@@ -141,6 +141,7 @@ sumDeltaTimes :: TicksPerBeat -> List MidiNote -> List DeltaTime
 sumDeltaTimes tpb notes = Cons 0.0 <<< reverse $ mapWithIndex (\_ i -> barPosition tpb <<< foldl (+) 0.0 $ take (length notes - i) $ deltaTimes notes) notes
       
 -- TODO : TPB * Numerator ipv 4.0
+-- TODO : Will cause rounding problems, because 'mod' does not accept Numbers...
 barPosition :: TicksPerBeat -> DeltaTime -> DeltaTime
 barPosition tpb d = toNumber <<< mod (round d) <<< round $ tpb * 4.0
 
@@ -152,9 +153,8 @@ eighthsIndex' ticksPerBeat = map (\(Tuple x (Tuple y z)) -> Tuple x y) <<< filte
     indexed :: List MidiNote -> List (Tuple Int (Tuple Number MidiNote))
     indexed notes = Data.List.Lazy.toUnfoldable <<< Data.List.Lazy.zip (Data.List.Lazy.iterate (_ + 1) 0) <<< Data.List.Lazy.fromFoldable $ positions ticksPerBeat notes
 
--- TODO : Will cause rounding problems, because 'mod' does not accept Numbers...
-
---foldr
+-- foldr
+-- How to get access to remainder of list using fold?
 beamsIndex :: Number -> List Int -> List (Tuple Int Number) -> List (List Int)
 beamsIndex _ accXs Nil                               = Cons accXs          Nil
 beamsIndex ticksPerBeat accXs (Cons x Nil)           = Cons (snoc accXs (fst x)) Nil
@@ -164,17 +164,6 @@ beamsIndex ticksPerBeat accXs (Cons x (Cons y (Cons z zs))) | ((snd x) == ((tick
 beamsIndex ticksPerBeat accXs (Cons x (Cons y ys)) | (snd x) == ((ticksPerBeat / 4.0) * 11.0) = Cons (snoc accXs (fst x)) (beamsIndex ticksPerBeat  Nil (Cons y ys))
 beamsIndex ticksPerBeat accXs (Cons x (Cons y ys)) | (fst x) /= (fst y) - 1 = Cons accXs (beamsIndex ticksPerBeat  Nil (Cons y ys))
 beamsIndex ticksPerBeat accXs (Cons x (Cons y ys)) | (fst x) == (fst y) - 1 = beamsIndex ticksPerBeat (snoc accXs (fst x)) (Cons y ys)
-
--- beamsIndex :: TicksPerBeat -> List Int -> List (Tuple Int Number) -> List (List Int)
--- beamsIndex tpb foo xs = foldl fn Nil xs
---   where
---     fn = 
-
-setFirstTie :: MidiNote -> MidiNote
-setFirstTie midiNote = midiNote { hasFirstTie = true }
-
-setEndingTie :: MidiNote -> MidiNote
-setEndingTie midiNote = midiNote { hasEndingTie = true }
 
 -- TODO read about ST monad and arrays
 midiEventWriter :: List MidiEvent -> List (Tuple MidiEvent Boolean)
