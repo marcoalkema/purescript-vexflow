@@ -49,7 +49,7 @@ renderMidiPure dat tpb = do
                    <<< map (\midiObject -> Tuple midiObject false) -- midiEventWriter
                    <<< filter filterNotes
                    $ toList midiEvents
-      measuredMidi = map (concat <<< setTies tpb numerator 0.0 Nil <<< setDots tpb numerator)
+      measuredMidi = map (setTies tpb numerator <<< setDots tpb numerator)
                      $ divideIntoMeasures tpb numerator 0.0 Nil midiNotes
       indexedTies  = toArray $ map findStartingTies measuredMidi
       indexedBeams :: Array (Array (Array BeamIndex))
@@ -89,34 +89,43 @@ setFirstTie midiNote = midiNote { hasFirstTie = true }
 setEndingTie :: MidiNote -> MidiNote
 setEndingTie midiNote = midiNote { hasEndingTie = true }
 
---fold
-setTies :: TicksPerBeat -> Numerator -> DeltaTime -> List MidiNote -> List MidiNote -> List (List MidiNote)
-setTies ticksPerBeat numerator accumulatedDeltaTime accNotes Nil = Cons accNotes Nil
-setTies ticksPerBeat numerator accumulatedDeltaTime accNotes (Cons note notes) =
-  if dt < ticksPerBeat then
-         setTies ticksPerBeat numerator dt (snoc accNotes note) notes
-  else if dt == ticksPerBeat then
-         Cons (snoc accNotes note) (setTies ticksPerBeat numerator 0.0 Nil notes)
-  else if dt == 2.0 * ticksPerBeat && (accumulatedDeltaTime == 0.0 || accumulatedDeltaTime == 960.0 ) then
-         Cons (snoc accNotes note) (setTies ticksPerBeat numerator (mod ((ticksPerBeat * 4.0) - accumulatedDeltaTime) (ticksPerBeat * 4.0))  Nil notes)
-  else if dt == 4.0 * ticksPerBeat then
-         Cons (snoc accNotes note) (setTies ticksPerBeat numerator 0.0 Nil notes)
-           else if dt > ticksPerBeat && note.hasDot then
-         Cons (snoc accNotes note) (setTies ticksPerBeat numerator (if accumulatedDeltaTime == 0.0 then resolution else 0.0) Nil notes)
-  else
-         Cons (snoc accNotes (setFirstTie $ insertNewDeltaTime lastNoteDeltaTime note)) (setTies ticksPerBeat numerator 0.0 Nil (Cons (setEndingTie $ insertNewDeltaTime newFirstNoteDeltaTime note) notes))
+-- Fix case for position 2.5tpb && deltaTime > 1.5tpb
+setTies :: TicksPerBeat -> Numerator -> List MidiNote -> List MidiNote
+setTies tpb num notes = (_.midiNotes) $ foldl fn {baseNotes : notes, accDt : 0.0, midiNotes : Nil } notes
   where
-    lastNoteDeltaTime     = ticksPerBeat - accumulatedDeltaTime
-    newFirstNoteDeltaTime = note.deltaTime - lastNoteDeltaTime
-    dt                    = accumulatedDeltaTime + note.deltaTime
-    resolution            = ticksPerBeat / 4.0
-
--- setTies :: TicksPerBeat -> Numerator -> List MidiNote -> List (List MidiNote)
--- setTies tpb num notes = map fn notes
-
+    fn b n = let     dt                    = b.accDt + currentNote.deltaTime
+                     currentNote           = fromMaybe (newNote 60 480.0 false false false) $ head b.baseNotes
+                     accumulatedNotes      = b.midiNotes
+                     hasDot n              = if n.deltaTime == 1.5 * tpb then
+                                               n { hasDot = true }
+                                             else
+                                               n
+                     newNote n dt ft et hd = { noteNumber   : n
+                                             , deltaTime    : dt
+                                             , hasFirstTie  : ft
+                                             , hasEndingTie : et
+                                             , hasDot       : hd }
+             in
+              if (b.accDt == tpb * 0.5 && currentNote.deltaTime >= tpb && currentNote.deltaTime /= tpb * 1.5)
+              || (b.accDt == tpb * 2.5 && currentNote.deltaTime >= tpb && currentNote.deltaTime /= tpb * 1.5)  then
+                  { baseNotes    : fromMaybe Nil $ tail b.baseNotes
+                  , accDt        : dt
+                  , midiNotes    : snoc (snoc accumulatedNotes
+                                         $ newNote currentNote.noteNumber (currentNote.deltaTime / 2.0) true false false)
+                                   $ newNote currentNote.noteNumber (currentNote.deltaTime / 2.0) false true false }
+              else if (b.accDt == tpb * 1.5 && currentNote.deltaTime >= tpb) then
+                  { baseNotes    : fromMaybe Nil $ tail b.baseNotes
+                  , accDt        : dt
+                  , midiNotes    : snoc (snoc accumulatedNotes
+                                         $ newNote currentNote.noteNumber (tpb * 0.5) true false false)
+                                   <<< hasDot $ newNote currentNote.noteNumber ((-) currentNote.deltaTime $ tpb * 0.5) false true false }
+              else
+                {baseNotes : fromMaybe Nil $ tail b.baseNotes, accDt : dt, midiNotes : snoc accumulatedNotes currentNote }
+                     
 insertNewDeltaTime :: DeltaTime -> MidiNote -> MidiNote
 insertNewDeltaTime n midiNote = midiNote { deltaTime = n }
 
+-- Note :: postion 0.5tpb + deltaTime = 3.5tpb???????
 setDots :: TicksPerBeat -> Numerator -> List MidiNote -> (List MidiNote)
 setDots tpb num notes = mapWithIndex checkPosition notes
   where
@@ -178,7 +187,7 @@ duration midiEvents@(Cons (Tuple (NoteOn midiEvent) isRead) xs) =
          , deltaTime    : (sum midiEvent.noteNumber midiEvents) - midiEvent.deltaTime
          , hasFirstTie  : false
          , hasEndingTie : false
-         , hasDot       : false}
+         , hasDot       : false }
     (duration (replaceBy (==) (noteOff) (toRead noteOff) xs))
   else duration xs
   where
@@ -190,9 +199,13 @@ duration (Cons x xs) =
   duration xs
 
 -- duration' :: List (Tuple MidiEvent Boolean) -> List MidiNote
--- duration' = foldl fn Nil
+-- duration' events = (_.midiNotes) $ foldl fn {base : events, midiNotes : Nil} events
 --   where
---     fn b x = 
+--     fn b (Tuple e r) =  { noteNumber   : midiEvent.noteNumber
+--                         , deltaTime    : (sum midiEvent.noteNumber midiEvents) - midiEvent.deltaTime
+--                         , hasFirstTie  : false
+--                         , hasEndingTie : false
+--                         , hasDot       : false}
 
 sum :: NoteNumber -> List (Tuple MidiEvent Boolean) -> Number
 sum n xs = foldl (\b x -> getDeltaTime x + b) 0.0 <<< flip take xs <<< (+) 1 <<< fromMaybe 0 $ findIndex (getNoteOff n) xs
