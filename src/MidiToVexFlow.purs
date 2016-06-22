@@ -93,9 +93,8 @@ setEndingTie midiNote = midiNote { hasEndingTie = true }
 setTies :: TicksPerBeat -> Numerator -> List MidiNote -> List MidiNote
 setTies tpb num notes = (_.midiNotes) $ foldl fn {baseNotes : notes, accDt : 0.0, midiNotes : Nil } notes
   where
-    fn b n = let     dt                    = b.accDt + currentNote.deltaTime
-                     currentNote           = fromMaybe (newNote 60 480.0 false false false) $ head b.baseNotes
-                     accumulatedNotes      = b.midiNotes
+    fn b n = let     dt                    = b.accDt + n.deltaTime
+                     tailBaseNotes         = fromMaybe Nil $ tail b.baseNotes
                      hasDot n              = if n.deltaTime == 1.5 * tpb then
                                                n { hasDot = true }
                                              else
@@ -106,21 +105,21 @@ setTies tpb num notes = (_.midiNotes) $ foldl fn {baseNotes : notes, accDt : 0.0
                                              , hasEndingTie : et
                                              , hasDot       : hd }
              in
-              if (b.accDt == tpb * 0.5 && currentNote.deltaTime >= tpb && currentNote.deltaTime /= tpb * 1.5)
-              || (b.accDt == tpb * 2.5 && currentNote.deltaTime >= tpb && currentNote.deltaTime /= tpb * 1.5)  then
-                  { baseNotes    : fromMaybe Nil $ tail b.baseNotes
+              if (b.accDt == tpb * 0.5 && n.deltaTime >= tpb && n.deltaTime /= tpb * 1.5)
+              || (b.accDt == tpb * 2.5 && n.deltaTime >= tpb && n.deltaTime /= tpb * 1.5)  then
+                  { baseNotes    : tailBaseNotes
                   , accDt        : dt
-                  , midiNotes    : snoc (snoc accumulatedNotes
-                                         $ newNote currentNote.noteNumber (currentNote.deltaTime / 2.0) true false false)
-                                   $ newNote currentNote.noteNumber (currentNote.deltaTime / 2.0) false true false }
-              else if (b.accDt == tpb * 1.5 && currentNote.deltaTime >= tpb) then
-                  { baseNotes    : fromMaybe Nil $ tail b.baseNotes
+                  , midiNotes    : snoc (snoc b.midiNotes
+                                         $ newNote n.noteNumber (n.deltaTime / 2.0) true false false)
+                                   $ newNote n.noteNumber (n.deltaTime / 2.0) false true false }
+              else if (b.accDt == tpb * 1.5 && n.deltaTime >= tpb) then
+                  { baseNotes    : tailBaseNotes
                   , accDt        : dt
-                  , midiNotes    : snoc (snoc accumulatedNotes
-                                         $ newNote currentNote.noteNumber (tpb * 0.5) true false false)
-                                   <<< hasDot $ newNote currentNote.noteNumber ((-) currentNote.deltaTime $ tpb * 0.5) false true false }
+                  , midiNotes    : snoc (snoc b.midiNotes
+                                         $ newNote n.noteNumber (tpb * 0.5) true false false)
+                                   <<< hasDot $ newNote n.noteNumber ((-) n.deltaTime $ tpb * 0.5) false true false }
               else
-                {baseNotes : fromMaybe Nil $ tail b.baseNotes, accDt : dt, midiNotes : snoc accumulatedNotes currentNote }
+                {baseNotes : fromMaybe Nil $ tail b.baseNotes, accDt : dt, midiNotes : snoc b.midiNotes n }
                      
 insertNewDeltaTime :: DeltaTime -> MidiNote -> MidiNote
 insertNewDeltaTime n midiNote = midiNote { deltaTime = n }
