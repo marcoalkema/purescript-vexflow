@@ -21,7 +21,7 @@
     "purescript-foldable-traversable": "^0.4.2",
     "purescript-math": "^0.2.0",
     "purescript-foreign": "^0.7.2",
-    "purescript-midiplayer": "https://github.com/marcoalkema/purescript-midiplayer.git#0cd92e49e915b9eb3b587084dc06e42656bdbf41",
+    "purescript-midiplayer": "https://github.com/marcoalkema/purescript-midiplayer.git#29df4b8a067e98076c101755c2429a9f07ee77e1",
     "purescript-partial": "^1.1.0",
     "purescript-prelude": "^0.1.4",
     "purescript-transformers": "^0.8.4",
